@@ -1,0 +1,58 @@
+name: 🐳 Docker-based Tests
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to test'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+        - staging
+        - production
+
+jobs:
+  docker-tests:
+    name: 🐳 Docker Test Execution
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🐳 Build Docker Test Image
+        run: |
+          cat > Dockerfile << 'DOCKERFILE'
+          FROM mcr.microsoft.com/playwright:v1.49.1-jammy
+          WORKDIR /app
+          COPY package*.json ./
+          RUN npm ci --only=production
+          COPY . .
+          RUN groupadd -r testuser && useradd -r -g testuser testuser
+          RUN chown -R testuser:testuser /app
+          USER testuser
+          CMD ["npm", "run", "bdd:headless"]
+DOCKERFILE
+          docker build -t playwright-bdd-tests .
+
+      - name: 🏃‍♂️ Run Tests in Docker Container
+        run: |
+          docker run --rm \
+            -v ${{ github.workspace }}/test-results:/app/test-results \
+            -v ${{ github.workspace }}/allure-results:/app/allure-results \
+            -v ${{ github.workspace }}/screenshots:/app/screenshots \
+            -e CI=true \
+            -e ENVIRONMENT=${{ github.event.inputs.environment }} \
+            playwright-bdd-tests npm run bdd:headless
+
+      - name: 📤 Upload Docker Test Results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: docker-test-results
+          path: |
+            test-results/
+            allure-results/
+            screenshots/
+          retention-days: 7

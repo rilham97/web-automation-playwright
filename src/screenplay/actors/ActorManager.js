@@ -3,7 +3,7 @@
  * Manages the creation and lifecycle of actors in our test scenarios
  */
 
-import { chromium } from '@playwright/test';
+import { chromium, firefox, webkit } from '@playwright/test';
 
 class ActorManager {
   constructor() {
@@ -48,14 +48,60 @@ class ActorManager {
                       process.argv.includes('--profile') && process.argv[process.argv.indexOf('--profile') + 1] === 'fast' ||
                       process.argv.includes('--profile') && process.argv[process.argv.indexOf('--profile') + 1] === 'ci';
     
-    if (isHeadless) {
-      console.log('🎭 ActorManager: HEADLESS mode detected');
+    // Determine which browser to use based on environment variable
+    const browserType = process.env.BROWSER || 'chromium';
+    
+    let browserEngine;
+    
+    switch (browserType.toLowerCase()) {
+    case 'firefox':
+      browserEngine = firefox;
+      break;
+    case 'webkit':
+      browserEngine = webkit;
+      break;
+    case 'chromium':
+    default:
+      browserEngine = chromium;
+      break;
     }
     
-    this.browser = await chromium.launch({ 
+    // Browser-specific launch options
+    const launchOptions = {
       headless: isHeadless,
       slowMo: isHeadless ? 0 : 50 // No slowMo in headless mode for speed
-    });
+    };
+    
+    // Add browser-specific configurations for CI stability
+    if (process.env.CI) {
+      launchOptions.args = [
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage',
+        '--disable-gpu'
+      ];
+      
+      // Firefox-specific args for CI
+      if (browserType.toLowerCase() === 'firefox') {
+        launchOptions.firefoxUserPrefs = {
+          'media.navigator.streams.fake': true,
+          'media.navigator.permission.disabled': true
+        };
+      }
+    }
+    
+    // Launch browser with error handling
+    try {
+      this.browser = await browserEngine.launch(launchOptions);
+    } catch (error) {
+      console.error(`❌ ActorManager: Failed to launch ${browserType} browser:`, error.message);
+      try {
+        this.browser = await chromium.launch(launchOptions);
+      } catch (fallbackError) {
+        console.error('❌ ActorManager: Even Chromium fallback failed:', fallbackError.message);
+        throw fallbackError;
+      }
+    }
     
     this.context = await this.browser.newContext({
       viewport: { width: 1280, height: 720 }

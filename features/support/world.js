@@ -1,5 +1,5 @@
 import { setWorldConstructor, Before, After, setDefaultTimeout, Status } from '@cucumber/cucumber';
-import { chromium } from '@playwright/test';
+import { chromium, firefox, webkit } from '@playwright/test';
 import { URLS } from '../../src/constants/urls.js';
 import fs from 'fs';
 import path from 'path';
@@ -48,17 +48,61 @@ class CustomWorld {
                       process.argv.includes('--profile=headless') ||
                       process.argv.includes('--profile') && process.argv[process.argv.indexOf('--profile') + 1] === 'headless';
     
-    // Log execution mode for confirmation
-    if (isHeadless) {
-      console.log('🤫 Running in HEADLESS mode - browser will not be visible');
+    // Determine which browser to use
+    const browserType = process.env.BROWSER || 'chromium';
+    
+    let browserEngine;
+    
+    switch (browserType.toLowerCase()) {
+    case 'firefox':
+      browserEngine = firefox;
+      break;
+    case 'webkit':
+      browserEngine = webkit;
+      break;
+    case 'chromium':
+    default:
+      browserEngine = chromium;
+      break;
     }
     
-    // Launch browser
-    this.browser = await chromium.launch({ 
+    // Browser-specific launch options
+    const launchOptions = {
       headless: isHeadless,
-      slowMo: isHeadless ? 0 : (worldParams.slowMo || 50), // No slowMo in headless mode for speed
-      devtools: !isHeadless  // Open devtools only in headed mode
-    });
+      slowMo: isHeadless ? 0 : (worldParams.slowMo || 50),
+      devtools: !isHeadless
+    };
+    
+    // Add browser-specific configurations for CI stability
+    if (process.env.CI) {
+      launchOptions.args = [
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage',
+        '--disable-gpu'
+      ];
+      
+      // Firefox-specific args for CI
+      if (browserType.toLowerCase() === 'firefox') {
+        launchOptions.firefoxUserPrefs = {
+          'media.navigator.streams.fake': true,
+          'media.navigator.permission.disabled': true
+        };
+      }
+    }
+    
+    // Launch browser with error handling
+    try {
+      this.browser = await browserEngine.launch(launchOptions);
+    } catch (error) {
+      console.error(`❌ Failed to launch ${browserType} browser:`, error.message);
+      try {
+        this.browser = await chromium.launch(launchOptions);
+      } catch (fallbackError) {
+        console.error('❌ Even Chromium fallback failed:', fallbackError.message);
+        throw fallbackError;
+      }
+    }
     
     // Create context
     this.context = await this.browser.newContext({
@@ -199,8 +243,6 @@ Before({ tags: '@authenticated' }, async function() {
   
   // Use Screenplay Pattern for authentication
   const actor = await this.actorCalled('Standard User');
-  
-  console.log('🔐 Attempting login with username: standard_user');
   
   await actor.attemptsTo(
     Navigate.to(URLS.BASE),

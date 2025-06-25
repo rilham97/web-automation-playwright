@@ -1,0 +1,83 @@
+name: 🔍 Debug Test - Minimal
+on:
+  workflow_dispatch:
+    inputs:
+      test_type:
+        description: 'Test type to run'
+        required: true
+        default: 'sorting'
+        type: choice
+        options:
+          - sorting
+          - login
+          - all
+
+jobs:
+  debug-minimal:
+    name: 🔍 Debug Minimal
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 📦 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: 📋 Install dependencies
+        run: |
+          cd Software-Engineer-AI-Agent-Atlas/REPOS/new-project
+          npm ci
+
+      - name: 🎭 Install Playwright
+        run: |
+          cd Software-Engineer-AI-Agent-Atlas/REPOS/new-project
+          npx playwright install chromium
+
+      - name: 🔍 Debug Test Execution
+        run: |
+          cd Software-Engineer-AI-Agent-Atlas/REPOS/new-project
+          
+          echo "=== Environment Check ==="
+          pwd
+          node --version
+          npm --version
+          
+          echo "=== Dependency Check ==="
+          npm list allure-cucumberjs || echo "allure-cucumberjs not found"
+          npm list @cucumber/cucumber || echo "cucumber not found"
+          
+          echo "=== Feature File Check ==="
+          ls -la features/*.feature
+          
+          echo "=== Cucumber Config Check ==="
+          cat cucumber.config.js | head -20
+          
+          echo "=== Dry Run Test ==="
+          npx cucumber-js --profile headless --tags '@sorting' --dry-run
+          
+          echo "=== Actual Test Run ==="
+          mkdir -p allure-results
+          npx cucumber-js --profile headless --tags '@sorting' --format summary --format allure-cucumberjs/reporter
+          
+          echo "=== Results Check ==="
+          echo "Allure results count: $(find allure-results -name '*.json' 2>/dev/null | wc -l)"
+          ls -la allure-results/ || echo "No allure-results"
+          
+          echo "=== Summary Test ==="
+          if [ -f scripts/test-summary.js ]; then
+            node scripts/test-summary.js
+          else
+            echo "No test-summary.js found"
+          fi
+
+      - name: 📁 Upload debug results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: debug-results
+          path: |
+            Software-Engineer-AI-Agent-Atlas/REPOS/new-project/allure-results/
+          retention-days: 1 

@@ -144,22 +144,22 @@ jobs:
           TEST_COMMAND=""
           if [ "$TEST_TYPE" = "smoke" ]; then
             echo "🔍 Running smoke tests with $BROWSER (Nuclear Option enabled)..."
-            TEST_COMMAND="npx cucumber-js --profile headless --tags '@smoke' --format allure-cucumberjs/reporter && node scripts/nuclear-option.js"
+            TEST_COMMAND="npx cucumber-js --profile headless --tags '@smoke' --format allure-cucumberjs/reporter; node scripts/nuclear-option.js"
           elif [ "$TEST_TYPE" = "login" ]; then
             echo "🔍 Running login tests with $BROWSER (Nuclear Option enabled)..."
-            TEST_COMMAND="npx cucumber-js --profile headless --tags '@login' --format allure-cucumberjs/reporter && node scripts/nuclear-option.js"
+            TEST_COMMAND="npx cucumber-js --profile headless --tags '@login' --format allure-cucumberjs/reporter; node scripts/nuclear-option.js"
           elif [ "$TEST_TYPE" = "cart" ]; then
             echo "🔍 Running cart tests with $BROWSER (Nuclear Option enabled)..."
-            TEST_COMMAND="npx cucumber-js --profile headless --tags '@cart' --format allure-cucumberjs/reporter && node scripts/nuclear-option.js"
+            TEST_COMMAND="npx cucumber-js --profile headless --tags '@cart' --format allure-cucumberjs/reporter; node scripts/nuclear-option.js"
           elif [ "$TEST_TYPE" = "checkout" ]; then
             echo "🔍 Running checkout tests with $BROWSER (Nuclear Option enabled)..."
-            TEST_COMMAND="npx cucumber-js --profile headless --tags '@checkout' --format allure-cucumberjs/reporter && node scripts/nuclear-option.js"
+            TEST_COMMAND="npx cucumber-js --profile headless --tags '@checkout' --format allure-cucumberjs/reporter; node scripts/nuclear-option.js"
           elif [ "$TEST_TYPE" = "sorting" ]; then
             echo "🔍 Running sorting tests with $BROWSER (Nuclear Option enabled)..."
-            TEST_COMMAND="npx cucumber-js --profile headless --tags '@sorting' --format allure-cucumberjs/reporter && node scripts/nuclear-option.js"
+            TEST_COMMAND="npx cucumber-js --profile headless --tags '@sorting' --format allure-cucumberjs/reporter; node scripts/nuclear-option.js"
           else
             echo "🔍 Running all tests with $BROWSER (Nuclear Option enabled)..."
-            TEST_COMMAND="npx cucumber-js --profile headless --format allure-cucumberjs/reporter && node scripts/nuclear-option.js"
+            TEST_COMMAND="npx cucumber-js --profile headless --format allure-cucumberjs/reporter; node scripts/nuclear-option.js"
           fi
           
           echo "📋 Executing command: $TEST_COMMAND"

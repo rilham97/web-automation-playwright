@@ -1,6 +1,11 @@
-const reporter = require('cucumber-html-reporter');
-const fs = require('fs');
-const path = require('path');
+import reporter from 'cucumber-html-reporter';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+// ES module equivalent of __dirname
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // Check if JSON report exists
 const jsonReportPath = path.join(__dirname, '..', 'reports', 'cucumber', 'cucumber-report.json');
@@ -18,12 +23,12 @@ const options = {
   scenarioTimestamp: true,
   launchReport: false,
   metadata: {
-    "App Version": "1.0.0",
-    "Test Environment": "SauceDemo",
-    "Browser": "Chrome",
-    "Platform": "Local",
-    "Parallel": "Scenarios",
-    "Executed": "Local"
+    'App Version': '1.0.0',
+    'Test Environment': 'SauceDemo',
+    'Browser': 'Chrome',
+    'Platform': 'Local',
+    'Parallel': 'Scenarios',
+    'Executed': 'Local'
   },
   failedSummaryReport: true,
   brandTitle: 'Playwright + Cucumber BDD Test Report',

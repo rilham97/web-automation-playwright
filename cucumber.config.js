@@ -1,6 +1,11 @@
-const fs = require('fs');
-const path = require('path');
-const { URLS } = require('./src/constants/urls');
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import { URLS } from './src/constants/urls.js';
+
+// ES module equivalent of __dirname
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // Create results directory if it doesn't exist
 const resultsDir = path.join(__dirname, 'reports/cucumber');
@@ -13,7 +18,7 @@ if (!fs.existsSync(resultsDir)) {
  * Reference: https://cucumber.io/docs/cucumber/configuration/
  * Note: Allure reporting is configured via command-line in package.json scripts
  */
-module.exports = {
+export default {
   default: {
     // Feature files path
     paths: ['features/**/*.feature'],

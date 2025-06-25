@@ -12,15 +12,15 @@ on:
       test_type:
         description: 'Type of tests to run'
         required: true
-        default: 'all'
+        default: 'smoke'
         type: choice
         options:
-        - all
         - smoke
         - login
         - cart
         - checkout
         - sorting
+        - all
 
 # Add workflow-level permissions for GitHub Pages
 permissions:
@@ -162,9 +162,12 @@ jobs:
           elif [ "$TEST_TYPE" = "sorting" ]; then
             echo "🔍 Running sorting tests with $BROWSER..."
             TEST_COMMAND="npx cucumber-js --profile headless --tags '@sorting' --format @cucumber/pretty-formatter --format allure-cucumberjs/reporter"
-          else
-            echo "🔍 Running all tests with $BROWSER..."
+          elif [ "$TEST_TYPE" = "all" ]; then
+            echo "🔍 Running ALL tests with $BROWSER (56 scenarios - may take long)..."
             TEST_COMMAND="npx cucumber-js --profile headless --format @cucumber/pretty-formatter --format allure-cucumberjs/reporter"
+          else
+            echo "🔍 Running smoke tests with $BROWSER (default)..."
+            TEST_COMMAND="npx cucumber-js --profile headless --tags '@smoke' --format @cucumber/pretty-formatter --format allure-cucumberjs/reporter"
           fi
           
           echo "📋 Executing command: $TEST_COMMAND"
@@ -183,8 +186,10 @@ jobs:
             npx cucumber-js --profile headless --tags '@cart' --dry-run | head -10
           elif [ "$TEST_TYPE" = "checkout" ]; then
             npx cucumber-js --profile headless --tags '@checkout' --dry-run | head -10
-          else
+          elif [ "$TEST_TYPE" = "all" ]; then
             npx cucumber-js --profile headless --dry-run | head -10
+          else
+            npx cucumber-js --profile headless --tags '@smoke' --dry-run | head -10
           fi
           
           # Execute tests and capture results

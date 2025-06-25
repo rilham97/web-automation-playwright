@@ -129,8 +129,13 @@ jobs:
         run: |
           echo "🎭 Starting BDD tests with $BROWSER browser..."
           
-          # Create directories to ensure artifacts exist
+          # Create directories to ensure artifacts exist with proper permissions
           mkdir -p test-results allure-results reports screenshots
+          chmod 755 test-results allure-results reports screenshots
+          
+          # Verify allure-cucumberjs module is properly installed
+          echo "🔍 Verifying allure-cucumberjs installation..."
+          npm list allure-cucumberjs || echo "⚠️ allure-cucumberjs not found in dependencies"
           
           # Create a basic test status file
           echo "Browser: $BROWSER" > test-results/test-info.txt
@@ -164,6 +169,24 @@ jobs:
           
           echo "📋 Executing command: $TEST_COMMAND"
           
+          # Debug: Check initial state
+          echo "🔍 Pre-execution check:"
+          ls -la allure-results/ 2>/dev/null || echo "allure-results directory empty/missing"
+          
+          # Debug: Check if cucumber can find scenarios
+          echo "🔍 Testing cucumber scenario discovery..."
+          if [ "$TEST_TYPE" = "sorting" ]; then
+            npx cucumber-js --profile headless --tags '@sorting' --dry-run | head -10
+          elif [ "$TEST_TYPE" = "login" ]; then
+            npx cucumber-js --profile headless --tags '@login' --dry-run | head -10
+          elif [ "$TEST_TYPE" = "cart" ]; then
+            npx cucumber-js --profile headless --tags '@cart' --dry-run | head -10
+          elif [ "$TEST_TYPE" = "checkout" ]; then
+            npx cucumber-js --profile headless --tags '@checkout' --dry-run | head -10
+          else
+            npx cucumber-js --profile headless --dry-run | head -10
+          fi
+          
           # Execute tests and capture results
           if $TEST_COMMAND 2>&1 | tee test-execution-log.txt; then
             TEST_STATUS="PASSED"
@@ -191,6 +214,12 @@ jobs:
             fi
             # Don't exit here - we want to collect artifacts even on failure
           fi
+          
+          # Debug: Check post-execution state
+          echo "🔍 Post-execution check:"
+          echo "Working directory: $(pwd)"
+          echo "Allure results count: $(find allure-results -name '*.json' 2>/dev/null | wc -l)"
+          echo "Test execution log size: $(wc -l test-execution-log.txt 2>/dev/null || echo '0 lines')"
           
           # Verify that test artifacts were actually generated
           echo "📁 Checking what was generated:"

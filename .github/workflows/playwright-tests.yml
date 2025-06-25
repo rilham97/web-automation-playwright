@@ -136,68 +136,102 @@ jobs:
           echo "Browser: $BROWSER" > test-results/test-info.txt
           echo "Started: $(date)" >> test-results/test-info.txt
           
-          # Run tests with detailed debugging
-          if [ "${{ github.event.inputs.test_type }}" = "smoke" ]; then
+          # Run tests based on input or default to all tests
+          TEST_TYPE="${{ github.event.inputs.test_type }}"
+          echo "🎯 Test type requested: ${TEST_TYPE:-'all (default)'}"
+          
+          TEST_COMMAND=""
+          if [ "$TEST_TYPE" = "smoke" ]; then
             echo "🔍 Running smoke tests with $BROWSER..."
-            echo "Command: npm run bdd:smoke:headless"
-            npm run bdd:smoke:headless 2>&1 | tee test-execution-log.txt || { 
-              echo "❌ Smoke tests failed for $BROWSER"; 
-              echo "📋 Last 20 lines of output:"; 
-              tail -20 test-execution-log.txt; 
-            }
-          elif [ "${{ github.event.inputs.test_type }}" = "login" ]; then
+            TEST_COMMAND="npm run bdd:smoke:headless"
+          elif [ "$TEST_TYPE" = "login" ]; then
             echo "🔍 Running login tests with $BROWSER..."
-            echo "Command: npm run bdd:login:headless"
-            npm run bdd:login:headless 2>&1 | tee test-execution-log.txt || { 
-              echo "❌ Login tests failed for $BROWSER"; 
-              echo "📋 Last 20 lines of output:"; 
-              tail -20 test-execution-log.txt; 
-            }
-          elif [ "${{ github.event.inputs.test_type }}" = "cart" ]; then
+            TEST_COMMAND="npm run bdd:login:headless"
+          elif [ "$TEST_TYPE" = "cart" ]; then
             echo "🔍 Running cart tests with $BROWSER..."
-            echo "Command: npm run bdd:cart:headless"
-            npm run bdd:cart:headless 2>&1 | tee test-execution-log.txt || { 
-              echo "❌ Cart tests failed for $BROWSER"; 
-              echo "📋 Last 20 lines of output:"; 
-              tail -20 test-execution-log.txt; 
-            }
-          elif [ "${{ github.event.inputs.test_type }}" = "checkout" ]; then
+            TEST_COMMAND="npm run bdd:cart:headless"
+          elif [ "$TEST_TYPE" = "checkout" ]; then
             echo "🔍 Running checkout tests with $BROWSER..."
-            echo "Command: npm run bdd:checkout:headless"
-            npm run bdd:checkout:headless 2>&1 | tee test-execution-log.txt || { 
-              echo "❌ Checkout tests failed for $BROWSER"; 
-              echo "📋 Last 20 lines of output:"; 
-              tail -20 test-execution-log.txt; 
-            }
-          elif [ "${{ github.event.inputs.test_type }}" = "sorting" ]; then
+            TEST_COMMAND="npm run bdd:checkout:headless"
+          elif [ "$TEST_TYPE" = "sorting" ]; then
             echo "🔍 Running sorting tests with $BROWSER..."
-            echo "Command: npm run bdd:sorting:headless"
-            npm run bdd:sorting:headless 2>&1 | tee test-execution-log.txt || { 
-              echo "❌ Sorting tests failed for $BROWSER"; 
-              echo "📋 Last 20 lines of output:"; 
-              tail -20 test-execution-log.txt; 
-            }
+            TEST_COMMAND="npm run bdd:sorting:headless"
           else
             echo "🔍 Running all tests with $BROWSER..."
-            echo "Command: npm run bdd:headless"
-            npm run bdd:headless 2>&1 | tee test-execution-log.txt || { 
-              echo "❌ All tests failed for $BROWSER"; 
-              echo "📋 Last 20 lines of output:"; 
-              tail -20 test-execution-log.txt; 
-            }
+            TEST_COMMAND="npm run bdd:headless"
           fi
           
-          # Show what was actually created
+          echo "📋 Executing command: $TEST_COMMAND"
+          
+          # Execute tests and capture results
+          if $TEST_COMMAND 2>&1 | tee test-execution-log.txt; then
+            echo "✅ Tests completed successfully for $BROWSER"
+            TEST_STATUS="PASSED"
+          else
+            echo "❌ Tests failed for $BROWSER"
+            echo "📋 Last 30 lines of output:"
+            tail -30 test-execution-log.txt
+            TEST_STATUS="FAILED"
+            # Don't exit here - we want to collect artifacts even on failure
+          fi
+          
+          # Verify that test artifacts were actually generated
           echo "📁 Checking what was generated:"
           ls -la test-results/ || echo "No test-results directory"
           ls -la allure-results/ || echo "No allure-results directory"  
           ls -la reports/ || echo "No reports directory"
-          echo "📄 Content of test-info.txt:"
-          cat test-results/test-info.txt || echo "No test-info.txt found"
           
-          # Record completion
+          # Check if allure results were generated
+          if [ -d "allure-results" ] && [ "$(ls -A allure-results 2>/dev/null)" ]; then
+            echo "✅ Allure results generated successfully"
+            ls -la allure-results/
+          else
+            echo "⚠️ No allure results generated - tests may not have run properly"
+          fi
+          
+          # Create Allure environment.properties for this browser
+          cat > allure-results/environment.properties << EOF
+          Browser=$BROWSER
+          Platform=ubuntu-latest
+          CI=true
+          Headless=true
+          Node.Version=$(node -v)
+          Playwright.Version=$(npx playwright --version)
+          Test.Type=${TEST_TYPE:-all}
+          Execution.Date=$(date -u +"%Y-%m-%d %H:%M:%S UTC")
+          Triggered.By=@$GITHUB_ACTOR
+          Trigger.Event=$GITHUB_EVENT_NAME
+          EOF
+          
+          # Create Allure executor.json for this browser  
+          cat > allure-results/executor.json << EOF
+          {
+            "name": "GitHub Actions - $BROWSER",
+            "type": "github-actions", 
+            "url": "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID",
+            "buildOrder": $GITHUB_RUN_NUMBER,
+            "buildName": "$BROWSER Browser Tests - @$GITHUB_ACTOR",
+            "buildUrl": "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID",
+            "reportName": "Playwright BDD - $BROWSER",
+            "reportUrl": "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID",
+            "triggeredBy": "$GITHUB_ACTOR",
+            "triggerEvent": "$GITHUB_EVENT_NAME"
+          }
+          EOF
+          
+          # Record completion and status
           echo "Completed: $(date)" >> test-results/test-info.txt
-          echo "Test execution completed (check logs for success/failure details)"
+          echo "Status: $TEST_STATUS" >> test-results/test-info.txt
+          
+          # Show final test-info.txt content
+          echo "📄 Final test-info.txt content:"
+          cat test-results/test-info.txt
+          
+          # Exit with error if tests failed (after collecting artifacts)
+          if [ "$TEST_STATUS" = "FAILED" ]; then
+            echo "💥 Failing job due to test failures"
+            exit 1
+          fi
 
       - name: 📸 Upload screenshots on failure
         uses: actions/upload-artifact@v4
@@ -254,18 +288,67 @@ jobs:
           ls -la collected-results/ || echo "No collected-results directory"
           find collected-results -type f | head -20
           
-          mkdir -p allure-results-combined
-          find collected-results -name "allure-results" -type d -exec cp -r {}/* allure-results-combined/ \; || true
+          # Create fresh allure-results directory
+          rm -rf allure-results
+          mkdir -p allure-results
           
-          echo "🔍 Checking allure results..."
-          ls -la allure-results-combined/ || echo "No allure-results-combined"
+          # Combine all allure results from different browsers
+          echo "🔄 Combining allure results from all browsers..."
+          find collected-results -name "*.json" -path "*/allure-results/*" -exec cp {} allure-results/ \; || echo "No JSON files found"
+          find collected-results -name "*.csv" -path "*/allure-results/*" -exec cp {} allure-results/ \; || echo "No CSV files found"
           
-          cp -r allure-results-combined/* allure-results/ 2>/dev/null || echo "No allure results to copy"
+          # Merge environment properties from all browsers
+          echo "🔄 Merging environment information..."
+          cat > allure-results/environment.properties << EOF
+          Test.Suite=Playwright BDD Cross-Browser Testing
+          Browsers.Tested=chromium,firefox
+          Platform=ubuntu-latest
+          CI.Provider=GitHub Actions
+          Execution.Mode=Headless
+          Node.Version=$(node -v)
+          Test.Framework=Cucumber + Playwright + Screenplay Pattern
+          Test.Type=${TEST_TYPE:-all}
+          Execution.Date=$(date -u +"%Y-%m-%d %H:%M:%S UTC")
+          Repository=$GITHUB_REPOSITORY
+          Branch=$GITHUB_REF_NAME
+          Commit=$GITHUB_SHA
+          Triggered.By=@$GITHUB_ACTOR
+          Trigger.Event=$GITHUB_EVENT_NAME
+          Run.ID=$GITHUB_RUN_ID
+          Run.Number=$GITHUB_RUN_NUMBER
+          EOF
+          
+          # Create combined executor.json
+          cat > allure-results/executor.json << EOF
+          {
+            "name": "GitHub Actions - Cross Browser",
+            "type": "github-actions",
+            "url": "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID",
+            "buildOrder": $GITHUB_RUN_NUMBER,
+            "buildName": "Cross-Browser BDD Tests - @$GITHUB_ACTOR",
+            "buildUrl": "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID",
+            "reportName": "Playwright BDD Cross-Browser Report",
+            "reportUrl": "https://rilham97.github.io/web-automation-playwright/",
+            "triggeredBy": "$GITHUB_ACTOR",
+            "triggerEvent": "$GITHUB_EVENT_NAME",
+            "runId": "$GITHUB_RUN_ID",
+            "runNumber": $GITHUB_RUN_NUMBER
+          }
+          EOF
           
           echo "🔍 Final allure-results directory:"
           ls -la allure-results/ || echo "No allure-results directory"
           
-          npm run allure:generate || echo "Allure generation failed, but continuing..."
+          # Generate report only if we have results
+          if [ "$(ls -A allure-results 2>/dev/null)" ]; then
+            echo "✅ Generating Allure report..."
+            npm run allure:generate
+            echo "✅ Allure report generated successfully"
+          else
+            echo "⚠️ No allure results found, creating empty report directory"
+            mkdir -p allure-report
+            echo "<html><body><h1>No test results found</h1></body></html>" > allure-report/index.html
+          fi
 
       - name: 🏗️ Generate Cucumber HTML Report (Fallback)
         run: |

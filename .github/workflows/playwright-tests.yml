@@ -203,6 +203,92 @@ jobs:
             npx cucumber-js --profile headless --dry-run | head -10
           fi
           
+          # Debug: Environment and dependencies verification
+          echo "🔍 === DEBUGGING CUCUMBER TAG EXECUTION ==="
+          echo "Working Directory: $(pwd)"
+          echo "Node Version: $(node --version)"
+          echo "NPM Version: $(npm --version)"
+          echo "Cucumber Version: $(npx cucumber-js --version)"
+          
+          # Debug: File structure verification
+          echo "🔍 Feature files structure:"
+          find features -name "*.feature" | head -10
+          echo "🔍 Step definitions structure:"
+          find features/step_definitions -name "*.js" | head -10
+          
+          # Debug: Dependencies verification
+          echo "🔍 Cucumber packages installed:"
+          npm list @cucumber/cucumber || echo "❌ @cucumber/cucumber not found"
+          npm list allure-cucumberjs || echo "❌ allure-cucumberjs not found"
+          
+          # Debug: Configuration file verification
+          echo "🔍 Cucumber config verification:"
+          ls -la cucumber.config.js
+          echo "🔍 Config content check:"
+          head -20 cucumber.config.js
+          
+          # Debug: Check if cucumber can find and parse features with tags
+          echo "🔍 === TAG DETECTION DEBUGGING ==="
+          echo "🔍 All available tags in features:"
+          grep -r "@" features/*.feature | grep -o "@[a-zA-Z][a-zA-Z0-9_]*" | sort | uniq
+          
+          echo "🔍 Scenarios with @sorting tag:"
+          grep -n "@sorting" features/*.feature || echo "❌ No @sorting tags found"
+          
+          # Debug: Test tag expression parsing
+          echo "🔍 === CUCUMBER TAG EXPRESSION TESTING ==="
+          echo "Testing tag expression parsing:"
+          npx cucumber-js --profile headless --tags '@sorting' --dry-run --format progress 2>&1 | head -20
+          
+          echo "🔍 Step definition loading test:"
+          npx cucumber-js --profile headless --tags '@sorting' --dry-run --format json > debug-output.json 2>&1 || echo "❌ JSON output failed"
+          
+          if [ -f debug-output.json ]; then
+            echo "🔍 JSON output size: $(wc -c debug-output.json)"
+            echo "🔍 First few lines of JSON:"
+            head -10 debug-output.json
+          fi
+          
+          # Debug: Step definition matching test
+          echo "🔍 === STEP DEFINITION MATCHING TEST ==="
+          echo "Testing if step definitions can be imported:"
+          node -e "
+          try {
+            console.log('Testing step definition imports...');
+            const path = require('path');
+            const fs = require('fs');
+            
+            // Check if step definition files exist
+            const stepDefDir = path.join(process.cwd(), 'features/step_definitions');
+            console.log('Step def directory:', stepDefDir);
+            console.log('Directory exists:', fs.existsSync(stepDefDir));
+            
+            if (fs.existsSync(stepDefDir)) {
+              const files = fs.readdirSync(stepDefDir);
+              console.log('Step definition files:', files);
+              
+              // Try to check if sorting_steps.js has the expected patterns
+              const sortingStepsPath = path.join(stepDefDir, 'sorting_steps.js');
+              if (fs.existsSync(sortingStepsPath)) {
+                const content = fs.readFileSync(sortingStepsPath, 'utf8');
+                console.log('Sorting steps file exists, size:', content.length);
+                console.log('Contains Given patterns:', content.includes('Given'));
+                console.log('Contains When patterns:', content.includes('When'));
+                console.log('Contains Then patterns:', content.includes('Then'));
+              }
+            }
+          } catch (error) {
+            console.error('❌ Step definition check failed:', error.message);
+          }
+          " || echo "❌ Node.js step definition check failed"
+          
+          # Debug: Manual scenario counting
+          echo "🔍 Manual scenario count verification:"
+          echo "Total scenarios in sorting.feature:"
+          grep -c "Scenario" features/sorting.feature || echo "❌ Could not count scenarios"
+          echo "Scenarios with @sorting tag:"
+          grep -c "@sorting" features/sorting.feature || echo "❌ Could not count @sorting scenarios"
+          
           # Execute tests and capture results
           if $TEST_COMMAND 2>&1 | tee test-execution-log.txt; then
             TEST_STATUS="PASSED"

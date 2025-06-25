@@ -140,39 +140,55 @@ jobs:
           TEST_TYPE="${{ github.event.inputs.test_type }}"
           echo "🎯 Test type requested: ${TEST_TYPE:-'all (default)'}"
           
-          # Pure test execution commands (Nuclear Option handled separately)
+          # Enhanced test execution commands with dual formatters and test summary
           TEST_COMMAND=""
           if [ "$TEST_TYPE" = "smoke" ]; then
             echo "🔍 Running smoke tests with $BROWSER..."
-            TEST_COMMAND="npx cucumber-js --profile headless --tags '@smoke' --format allure-cucumberjs/reporter"
+            TEST_COMMAND="npx cucumber-js --profile headless --tags '@smoke' --format @cucumber/pretty-formatter --format allure-cucumberjs/reporter --format-options '{\"resultsDir\": \"allure-results\"}'"
           elif [ "$TEST_TYPE" = "login" ]; then
             echo "🔍 Running login tests with $BROWSER..."
-            TEST_COMMAND="npx cucumber-js --profile headless --tags '@login' --format allure-cucumberjs/reporter"
+            TEST_COMMAND="npx cucumber-js --profile headless --tags '@login' --format @cucumber/pretty-formatter --format allure-cucumberjs/reporter --format-options '{\"resultsDir\": \"allure-results\"}'"
           elif [ "$TEST_TYPE" = "cart" ]; then
             echo "🔍 Running cart tests with $BROWSER..."
-            TEST_COMMAND="npx cucumber-js --profile headless --tags '@cart' --format allure-cucumberjs/reporter"
+            TEST_COMMAND="npx cucumber-js --profile headless --tags '@cart' --format @cucumber/pretty-formatter --format allure-cucumberjs/reporter --format-options '{\"resultsDir\": \"allure-results\"}'"
           elif [ "$TEST_TYPE" = "checkout" ]; then
             echo "🔍 Running checkout tests with $BROWSER..."
-            TEST_COMMAND="npx cucumber-js --profile headless --tags '@checkout' --format allure-cucumberjs/reporter"
+            TEST_COMMAND="npx cucumber-js --profile headless --tags '@checkout' --format @cucumber/pretty-formatter --format allure-cucumberjs/reporter --format-options '{\"resultsDir\": \"allure-results\"}'"
           elif [ "$TEST_TYPE" = "sorting" ]; then
             echo "🔍 Running sorting tests with $BROWSER..."
-            TEST_COMMAND="npx cucumber-js --profile headless --tags '@sorting' --format allure-cucumberjs/reporter"
+            TEST_COMMAND="npx cucumber-js --profile headless --tags '@sorting' --format @cucumber/pretty-formatter --format allure-cucumberjs/reporter --format-options '{\"resultsDir\": \"allure-results\"}'"
           else
             echo "🔍 Running all tests with $BROWSER..."
-            TEST_COMMAND="npx cucumber-js --profile headless --format allure-cucumberjs/reporter"
+            TEST_COMMAND="npx cucumber-js --profile headless --format @cucumber/pretty-formatter --format allure-cucumberjs/reporter --format-options '{\"resultsDir\": \"allure-results\"}'"
           fi
           
           echo "📋 Executing command: $TEST_COMMAND"
           
           # Execute tests and capture results
           if $TEST_COMMAND 2>&1 | tee test-execution-log.txt; then
-            echo "✅ Tests completed successfully for $BROWSER"
             TEST_STATUS="PASSED"
+            echo "✅ Tests completed successfully for $BROWSER"
+            
+            # Generate test summary for successful runs
+            echo "📊 Generating test summary..."
+            if node scripts/test-summary.js; then
+              echo "📈 Test summary generated successfully"
+            else
+              echo "⚠️ Failed to generate test summary (continuing anyway)"
+            fi
           else
+            TEST_STATUS="FAILED"
             echo "❌ Tests failed for $BROWSER"
             echo "📋 Last 30 lines of output:"
             tail -30 test-execution-log.txt
-            TEST_STATUS="FAILED"
+            
+            # Generate test summary even for failed runs
+            echo "📊 Generating test summary for failed run..."
+            if node scripts/test-summary.js; then
+              echo "📈 Test summary generated successfully"
+            else
+              echo "⚠️ Failed to generate test summary (continuing anyway)"
+            fi
             # Don't exit here - we want to collect artifacts even on failure
           fi
           

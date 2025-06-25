@@ -140,25 +140,26 @@ jobs:
           TEST_TYPE="${{ github.event.inputs.test_type }}"
           echo "🎯 Test type requested: ${TEST_TYPE:-'all (default)'}"
           
+          # Nuclear Option commands for screenshot attachment
           TEST_COMMAND=""
           if [ "$TEST_TYPE" = "smoke" ]; then
-            echo "🔍 Running smoke tests with $BROWSER..."
-            TEST_COMMAND="npm run bdd:smoke:headless"
+            echo "🔍 Running smoke tests with $BROWSER (Nuclear Option enabled)..."
+            TEST_COMMAND="npx cucumber-js --profile headless --tags '@smoke' --format allure-cucumberjs/reporter && node scripts/nuclear-option.js"
           elif [ "$TEST_TYPE" = "login" ]; then
-            echo "🔍 Running login tests with $BROWSER..."
-            TEST_COMMAND="npm run bdd:login:headless"
+            echo "🔍 Running login tests with $BROWSER (Nuclear Option enabled)..."
+            TEST_COMMAND="npx cucumber-js --profile headless --tags '@login' --format allure-cucumberjs/reporter && node scripts/nuclear-option.js"
           elif [ "$TEST_TYPE" = "cart" ]; then
-            echo "🔍 Running cart tests with $BROWSER..."
-            TEST_COMMAND="npm run bdd:cart:headless"
+            echo "🔍 Running cart tests with $BROWSER (Nuclear Option enabled)..."
+            TEST_COMMAND="npx cucumber-js --profile headless --tags '@cart' --format allure-cucumberjs/reporter && node scripts/nuclear-option.js"
           elif [ "$TEST_TYPE" = "checkout" ]; then
-            echo "🔍 Running checkout tests with $BROWSER..."
-            TEST_COMMAND="npm run bdd:checkout:headless"
+            echo "🔍 Running checkout tests with $BROWSER (Nuclear Option enabled)..."
+            TEST_COMMAND="npx cucumber-js --profile headless --tags '@checkout' --format allure-cucumberjs/reporter && node scripts/nuclear-option.js"
           elif [ "$TEST_TYPE" = "sorting" ]; then
-            echo "🔍 Running sorting tests with $BROWSER..."
-            TEST_COMMAND="npm run bdd:sorting:headless"
+            echo "🔍 Running sorting tests with $BROWSER (Nuclear Option enabled)..."
+            TEST_COMMAND="npx cucumber-js --profile headless --tags '@sorting' --format allure-cucumberjs/reporter && node scripts/nuclear-option.js"
           else
-            echo "🔍 Running all tests with $BROWSER..."
-            TEST_COMMAND="npm run bdd:headless"
+            echo "🔍 Running all tests with $BROWSER (Nuclear Option enabled)..."
+            TEST_COMMAND="npx cucumber-js --profile headless --format allure-cucumberjs/reporter && node scripts/nuclear-option.js"
           fi
           
           echo "📋 Executing command: $TEST_COMMAND"
@@ -302,9 +303,6 @@ jobs:
           merge-multiple: true
         continue-on-error: true
 
-      - name: 🎭 Install Playwright browsers
-        run: npx playwright install chromium
-
       - name: 📊 Generate Allure Report
         run: |
           echo "🔍 Debugging collected results..."
@@ -320,13 +318,14 @@ jobs:
           find collected-results -name "*.json" -path "*/allure-results/*" -exec cp {} allure-results/ \; || echo "No JSON files found"
           find collected-results -name "*.csv" -path "*/allure-results/*" -exec cp {} allure-results/ \; || echo "No CSV files found"
           
-          # Copy screenshots to allure-results for inclusion in report
-          echo "📸 Including screenshots in Allure report..."
+          # Nuclear Option should have already injected screenshots into JSON files
+          # This section copies any remaining loose screenshots as backup
+          echo "📸 Copying any remaining screenshots to Allure report..."
           if [ -d "collected-screenshots" ]; then
             mkdir -p allure-results/screenshots
             find collected-screenshots -name "*.png" -exec cp {} allure-results/screenshots/ \; || echo "No screenshots found"
             find collected-screenshots -name "*.jpg" -exec cp {} allure-results/screenshots/ \; || echo "No JPG screenshots found"
-            echo "✅ Screenshots copied to allure results"
+            echo "✅ Screenshots copied to allure results (backup)"
             ls -la allure-results/screenshots/ || echo "No screenshots directory"
           else
             echo "⚠️ No screenshots directory found - tests may have all passed"

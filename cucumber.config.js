@@ -23,10 +23,14 @@ export default {
     // Feature files path
     paths: ['features/**/*.feature'],
     
-    // Step definitions path - ES module compatible
+    // Step definitions path - explicit imports instead of glob patterns
     import: [
-      'features/step_definitions/**/*.js', 
-      'features/support/**/*.js'
+      'features/support/world.js',
+      'features/step_definitions/global_steps.js',
+      'features/step_definitions/login_steps.js',
+      'features/step_definitions/cart_steps.js',
+      'features/step_definitions/checkout_steps.js',
+      'features/step_definitions/sorting_steps.js'
     ],
     
     // Remove requireModule for now to avoid ES module conflicts
@@ -67,8 +71,12 @@ export default {
   headless: {
     paths: ['features/**/*.feature'],
     import: [
-      'features/step_definitions/**/*.js', 
-      'features/support/**/*.js'
+      'features/support/world.js',
+      'features/step_definitions/global_steps.js',
+      'features/step_definitions/login_steps.js',
+      'features/step_definitions/cart_steps.js',
+      'features/step_definitions/checkout_steps.js',
+      'features/step_definitions/sorting_steps.js'
     ],
     // requireModule: ['allure-cucumberjs'],
     format: [
@@ -97,8 +105,12 @@ export default {
   fast: {
     paths: ['features/**/*.feature'],
     import: [
-      'features/step_definitions/**/*.js', 
-      'features/support/**/*.js'
+      'features/support/world.js',
+      'features/step_definitions/global_steps.js',
+      'features/step_definitions/login_steps.js',
+      'features/step_definitions/cart_steps.js',
+      'features/step_definitions/checkout_steps.js',
+      'features/step_definitions/sorting_steps.js'
     ],
     // requireModule: ['allure-cucumberjs'],
     format: [
@@ -125,8 +137,12 @@ export default {
   ci: {
     paths: ['features/**/*.feature'],
     import: [
-      'features/step_definitions/**/*.js', 
-      'features/support/**/*.js'
+      'features/support/world.js',
+      'features/step_definitions/global_steps.js',
+      'features/step_definitions/login_steps.js',
+      'features/step_definitions/cart_steps.js',
+      'features/step_definitions/checkout_steps.js',
+      'features/step_definitions/sorting_steps.js'
     ],
     // requireModule: ['allure-cucumberjs'],
     format: [

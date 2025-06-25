@@ -20,148 +20,176 @@ if (!fs.existsSync(resultsDir)) {
  */
 export default {
   default: {
-    // Feature files path
-    paths: ['features/**/*.feature'],
+    // Feature files
+    features: ['features/**/*.feature'],
     
-    // Step definitions path - explicit imports instead of glob patterns
+    // Step definitions and support files - using glob patterns
     import: [
-      'features/support/world.js',
-      'features/step_definitions/global_steps.js',
-      'features/step_definitions/login_steps.js',
-      'features/step_definitions/cart_steps.js',
-      'features/step_definitions/checkout_steps.js',
-      'features/step_definitions/sorting_steps.js'
+      'features/support/**/*.js',
+      'features/step_definitions/**/*.js'
     ],
     
-    // Remove requireModule for now to avoid ES module conflicts
-    // requireModule: ['allure-cucumberjs'],
-    
-    // Formatters and reporters (Allure configured separately via CLI)
+    // Default formatters
     format: [
-      'progress-bar',
       '@cucumber/pretty-formatter',
-      'json:reports/cucumber/cucumber-report.json',
-      'html:reports/cucumber/cucumber-report.html'
+      'allure-cucumberjs/reporter'
     ],
     
-    // Format options
+    // Output directory for JSON results
     formatOptions: {
-      snippetInterface: 'async-await'
+      resultsDir: resultsDir
     },
     
-    // Global timeout for steps (30 seconds)
-    timeout: 30000,
+    // Retry failed scenarios
+    retry: 0,
     
     // Parallel execution
     parallel: 1,
     
-    // World parameters (accessible in step definitions)
+    // Exit on first failure
+    failFast: false,
+    
+    // Default world parameters
     worldParameters: {
-      baseURL: URLS.BASE,
-      headless: false,
-      timeout: 30000,
-      screenshot: true,
-      video: false,
-      // Screenplay Pattern configuration
-      screenplayEnabled: true
-    }
-  },
-  
-  // 🤫 Silent/Headless execution - runs tests without opening browser UI
-  headless: {
-    paths: ['features/**/*.feature'],
-    import: [
-      'features/support/world.js',
-      'features/step_definitions/global_steps.js',
-      'features/step_definitions/login_steps.js',
-      'features/step_definitions/cart_steps.js',
-      'features/step_definitions/checkout_steps.js',
-      'features/step_definitions/sorting_steps.js'
-    ],
-    // requireModule: ['allure-cucumberjs'],
-    format: [
-      'progress-bar',
-      '@cucumber/pretty-formatter',
-      'json:reports/cucumber/cucumber-report.json',
-      'html:reports/cucumber/cucumber-report.html'
-    ],
-    formatOptions: {
-      snippetInterface: 'async-await'
-    },
-    timeout: 30000,
-    parallel: 1,
-    worldParameters: {
-      baseURL: URLS.BASE,
-      headless: true,        // 🎯 Browser runs in background
-      timeout: 30000,
-      screenshot: true,      // Still capture screenshots on failure
-      video: false,
-      screenplayEnabled: true,
-      slowMo: 0             // No slow motion in headless mode
+      baseUrl: URLS.BASE
     }
   },
 
-  // 🚀 Fast headless execution - optimized for speed
-  fast: {
-    paths: ['features/**/*.feature'],
+  // Profile for headless execution (CI/CD)
+  headless: {
+    features: ['features/**/*.feature'],
     import: [
-      'features/support/world.js',
-      'features/step_definitions/global_steps.js',
-      'features/step_definitions/login_steps.js',
-      'features/step_definitions/cart_steps.js',
-      'features/step_definitions/checkout_steps.js',
-      'features/step_definitions/sorting_steps.js'
+      'features/support/**/*.js',
+      'features/step_definitions/**/*.js'
     ],
-    // requireModule: ['allure-cucumberjs'],
     format: [
-      'progress-bar',
-      'json:reports/cucumber/cucumber-report.json'
+      '@cucumber/pretty-formatter',
+      'allure-cucumberjs/reporter'
     ],
     formatOptions: {
-      snippetInterface: 'async-await'
+      resultsDir: resultsDir
     },
-    timeout: 20000,        // Shorter timeout for speed
-    parallel: 2,           // More parallel workers
+    retry: 0,
+    parallel: 1,
+    failFast: false,
     worldParameters: {
-      baseURL: URLS.BASE,
-      headless: true,
-      timeout: 20000,
-      screenshot: false,    // No screenshots for max speed
-      video: false,
-      screenplayEnabled: true,
-      slowMo: 0
+      baseUrl: URLS.BASE,
+      headless: true
     }
   },
-  
-  // Configuration for CI environment
-  ci: {
-    paths: ['features/**/*.feature'],
+
+  // Profile for smoke tests
+  smoke: {
+    features: ['features/**/*.feature'],
     import: [
-      'features/support/world.js',
-      'features/step_definitions/global_steps.js',
-      'features/step_definitions/login_steps.js',
-      'features/step_definitions/cart_steps.js',
-      'features/step_definitions/checkout_steps.js',
-      'features/step_definitions/sorting_steps.js'
+      'features/support/**/*.js',
+      'features/step_definitions/**/*.js'
     ],
-    // requireModule: ['allure-cucumberjs'],
     format: [
-      'progress-bar',
-      'json:reports/cucumber/cucumber-report.json',
-      'html:reports/cucumber/cucumber-report.html'
+      '@cucumber/pretty-formatter',
+      'allure-cucumberjs/reporter'
     ],
     formatOptions: {
-      snippetInterface: 'async-await'
+      resultsDir: resultsDir
     },
-    timeout: 30000,
-    parallel: 2,
+    tags: '@smoke',
+    retry: 0,
+    parallel: 1,
+    failFast: false,
     worldParameters: {
-      baseURL: URLS.BASE,
-      headless: true,
-      timeout: 30000,
-      screenshot: true,
-      video: true,
-      screenplayEnabled: true
+      baseUrl: URLS.BASE
+    }
+  },
+
+  // Profile for login tests
+  login: {
+    features: ['features/**/*.feature'],
+    import: [
+      'features/support/**/*.js',
+      'features/step_definitions/**/*.js'
+    ],
+    format: [
+      '@cucumber/pretty-formatter',
+      'allure-cucumberjs/reporter'
+    ],
+    formatOptions: {
+      resultsDir: resultsDir
+    },
+    tags: '@login',
+    retry: 0,
+    parallel: 1,
+    failFast: false,
+    worldParameters: {
+      baseUrl: URLS.BASE
+    }
+  },
+
+  // Profile for cart tests
+  cart: {
+    features: ['features/**/*.feature'],
+    import: [
+      'features/support/**/*.js',
+      'features/step_definitions/**/*.js'
+    ],
+    format: [
+      '@cucumber/pretty-formatter',
+      'allure-cucumberjs/reporter'
+    ],
+    formatOptions: {
+      resultsDir: resultsDir
+    },
+    tags: '@cart',
+    retry: 0,
+    parallel: 1,
+    failFast: false,
+    worldParameters: {
+      baseUrl: URLS.BASE
+    }
+  },
+
+  // Profile for checkout tests
+  checkout: {
+    features: ['features/**/*.feature'],
+    import: [
+      'features/support/**/*.js',
+      'features/step_definitions/**/*.js'
+    ],
+    format: [
+      '@cucumber/pretty-formatter',
+      'allure-cucumberjs/reporter'
+    ],
+    formatOptions: {
+      resultsDir: resultsDir
+    },
+    tags: '@checkout',
+    retry: 0,
+    parallel: 1,
+    failFast: false,
+    worldParameters: {
+      baseUrl: URLS.BASE
+    }
+  },
+
+  // Profile for sorting tests
+  sorting: {
+    features: ['features/**/*.feature'],
+    import: [
+      'features/support/**/*.js',
+      'features/step_definitions/**/*.js'
+    ],
+    format: [
+      '@cucumber/pretty-formatter',
+      'allure-cucumberjs/reporter'
+    ],
+    formatOptions: {
+      resultsDir: resultsDir
+    },
+    tags: '@sorting',
+    retry: 0,
+    parallel: 1,
+    failFast: false,
+    worldParameters: {
+      baseUrl: URLS.BASE
     }
   }
 }; 

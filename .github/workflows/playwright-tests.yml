@@ -140,26 +140,26 @@ jobs:
           TEST_TYPE="${{ github.event.inputs.test_type }}"
           echo "🎯 Test type requested: ${TEST_TYPE:-'all (default)'}"
           
-          # Nuclear Option commands for screenshot attachment
+          # Pure test execution commands (Nuclear Option handled separately)
           TEST_COMMAND=""
           if [ "$TEST_TYPE" = "smoke" ]; then
-            echo "🔍 Running smoke tests with $BROWSER (Nuclear Option enabled)..."
-            TEST_COMMAND="npx cucumber-js --profile headless --tags '@smoke' --format allure-cucumberjs/reporter; node scripts/nuclear-option.js"
+            echo "🔍 Running smoke tests with $BROWSER..."
+            TEST_COMMAND="npx cucumber-js --profile headless --tags '@smoke' --format allure-cucumberjs/reporter"
           elif [ "$TEST_TYPE" = "login" ]; then
-            echo "🔍 Running login tests with $BROWSER (Nuclear Option enabled)..."
-            TEST_COMMAND="npx cucumber-js --profile headless --tags '@login' --format allure-cucumberjs/reporter; node scripts/nuclear-option.js"
+            echo "🔍 Running login tests with $BROWSER..."
+            TEST_COMMAND="npx cucumber-js --profile headless --tags '@login' --format allure-cucumberjs/reporter"
           elif [ "$TEST_TYPE" = "cart" ]; then
-            echo "🔍 Running cart tests with $BROWSER (Nuclear Option enabled)..."
-            TEST_COMMAND="npx cucumber-js --profile headless --tags '@cart' --format allure-cucumberjs/reporter; node scripts/nuclear-option.js"
+            echo "🔍 Running cart tests with $BROWSER..."
+            TEST_COMMAND="npx cucumber-js --profile headless --tags '@cart' --format allure-cucumberjs/reporter"
           elif [ "$TEST_TYPE" = "checkout" ]; then
-            echo "🔍 Running checkout tests with $BROWSER (Nuclear Option enabled)..."
-            TEST_COMMAND="npx cucumber-js --profile headless --tags '@checkout' --format allure-cucumberjs/reporter; node scripts/nuclear-option.js"
+            echo "🔍 Running checkout tests with $BROWSER..."
+            TEST_COMMAND="npx cucumber-js --profile headless --tags '@checkout' --format allure-cucumberjs/reporter"
           elif [ "$TEST_TYPE" = "sorting" ]; then
-            echo "🔍 Running sorting tests with $BROWSER (Nuclear Option enabled)..."
-            TEST_COMMAND="npx cucumber-js --profile headless --tags '@sorting' --format allure-cucumberjs/reporter; node scripts/nuclear-option.js"
+            echo "🔍 Running sorting tests with $BROWSER..."
+            TEST_COMMAND="npx cucumber-js --profile headless --tags '@sorting' --format allure-cucumberjs/reporter"
           else
-            echo "🔍 Running all tests with $BROWSER (Nuclear Option enabled)..."
-            TEST_COMMAND="npx cucumber-js --profile headless --format allure-cucumberjs/reporter; node scripts/nuclear-option.js"
+            echo "🔍 Running all tests with $BROWSER..."
+            TEST_COMMAND="npx cucumber-js --profile headless --format allure-cucumberjs/reporter"
           fi
           
           echo "📋 Executing command: $TEST_COMMAND"
@@ -267,10 +267,100 @@ jobs:
             allure-results/
           retention-days: 30
 
+  nuclear-option:
+    name: 🚀 Nuclear Option - Screenshot Injection
+    runs-on: ubuntu-latest
+    needs: test-execution
+    if: always()
+
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 📦 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: 📋 Install dependencies
+        run: npm ci
+
+      - name: ⬇️ Download test results
+        uses: actions/download-artifact@v4
+        with:
+          pattern: test-results-*
+          path: downloaded-results/
+          merge-multiple: true
+
+      - name: ⬇️ Download screenshots
+        uses: actions/download-artifact@v4
+        with:
+          pattern: screenshots-*
+          path: downloaded-screenshots/
+          merge-multiple: true
+        continue-on-error: true
+
+      - name: 🔧 Prepare Nuclear Option Environment
+        run: |
+          echo "🚀 Setting up Nuclear Option environment..."
+          
+          # Create working directories
+          mkdir -p allure-results screenshots
+          
+          # Copy allure results
+          echo "📁 Copying allure results..."
+          find downloaded-results -name "*.json" -path "*/allure-results/*" -exec cp {} allure-results/ \; || echo "No JSON files found"
+          find downloaded-results -name "*.csv" -path "*/allure-results/*" -exec cp {} allure-results/ \; || echo "No CSV files found"
+          find downloaded-results -name "*.properties" -path "*/allure-results/*" -exec cp {} allure-results/ \; || echo "No properties files found"
+          
+          # Copy screenshots
+          echo "📸 Copying screenshots..."
+          find downloaded-screenshots -name "*.png" -exec cp {} screenshots/ \; || echo "No PNG screenshots found"
+          find downloaded-screenshots -name "*.jpg" -exec cp {} screenshots/ \; || echo "No JPG screenshots found"
+          
+          echo "🔍 Current state before Nuclear Option:"
+          echo "Allure results:"
+          ls -la allure-results/ || echo "No allure-results directory"
+          echo "Screenshots:"
+          ls -la screenshots/ || echo "No screenshots directory"
+
+      - name: 🚀 Execute Nuclear Option
+        run: |
+          echo "🚀 NUCLEAR OPTION: Starting screenshot injection..."
+          
+          # Run Nuclear Option
+          if node scripts/nuclear-option.js; then
+            echo "✅ Nuclear Option completed successfully"
+          else
+            echo "⚠️ Nuclear Option encountered issues (continuing anyway)"
+          fi
+          
+          echo "🔍 Final state after Nuclear Option:"
+          echo "Updated allure results:"
+          ls -la allure-results/ || echo "No allure-results directory"
+          
+          # Check for injected attachments
+          ATTACHMENT_COUNT=$(find allure-results -name "*attachment*.png" | wc -l)
+          echo "📸 Found $ATTACHMENT_COUNT injected screenshot attachments"
+          
+          if [ "$ATTACHMENT_COUNT" -gt 0 ]; then
+            echo "✅ Screenshots successfully injected into Allure results"
+            find allure-results -name "*attachment*.png" | head -5
+          else
+            echo "ℹ️ No screenshots were injected (tests may have all passed)"
+          fi
+
+      - name: 📤 Upload Enhanced Allure Results
+        uses: actions/upload-artifact@v4
+        with:
+          name: nuclear-enhanced-allure-results
+          path: allure-results/
+          retention-days: 30
+
   allure-report:
     name: 📊 Generate Allure Report
     runs-on: ubuntu-latest
-    needs: test-execution
+    needs: [test-execution, nuclear-option]
     if: always()
 
     steps:
@@ -288,7 +378,14 @@ jobs:
       - name: 🔧 Install Allure CLI
         run: npm install -g allure-commandline
 
-      - name: ⬇️ Download all test results
+      - name: ⬇️ Download nuclear-enhanced results
+        uses: actions/download-artifact@v4
+        with:
+          name: nuclear-enhanced-allure-results
+          path: allure-results/
+        continue-on-error: true
+
+      - name: ⬇️ Download original test results (fallback)
         uses: actions/download-artifact@v4
         with:
           pattern: test-results-*
@@ -305,18 +402,26 @@ jobs:
 
       - name: 📊 Generate Allure Report
         run: |
-          echo "🔍 Debugging collected results..."
-          ls -la collected-results/ || echo "No collected-results directory"
-          find collected-results -type f | head -20
+          echo "🔍 Checking nuclear-enhanced results..."
+          ls -la allure-results/ || echo "No nuclear-enhanced allure-results directory"
           
-          # Create fresh allure-results directory
-          rm -rf allure-results
-          mkdir -p allure-results
-          
-          # Combine all allure results from different browsers
-          echo "🔄 Combining allure results from all browsers..."
-          find collected-results -name "*.json" -path "*/allure-results/*" -exec cp {} allure-results/ \; || echo "No JSON files found"
-          find collected-results -name "*.csv" -path "*/allure-results/*" -exec cp {} allure-results/ \; || echo "No CSV files found"
+          # If nuclear-enhanced results don't exist, fall back to original results
+          if [ ! -d "allure-results" ] || [ ! "$(ls -A allure-results 2>/dev/null)" ]; then
+            echo "⚠️ No nuclear-enhanced results found, using original results..."
+            ls -la collected-results/ || echo "No collected-results directory"
+            find collected-results -type f | head -20
+            
+            # Create fresh allure-results directory
+            rm -rf allure-results
+            mkdir -p allure-results
+            
+            # Combine all allure results from different browsers
+            echo "🔄 Combining allure results from all browsers..."
+            find collected-results -name "*.json" -path "*/allure-results/*" -exec cp {} allure-results/ \; || echo "No JSON files found"
+            find collected-results -name "*.csv" -path "*/allure-results/*" -exec cp {} allure-results/ \; || echo "No CSV files found"
+          else
+            echo "✅ Using nuclear-enhanced results with screenshot attachments"
+          fi
           
           # Nuclear Option should have already injected screenshots into JSON files
           # This section copies any remaining loose screenshots as backup
@@ -431,7 +536,7 @@ jobs:
   deploy-reports:
     name: 🚀 Deploy Reports to GitHub Pages
     runs-on: ubuntu-latest
-    needs: allure-report
+    needs: [allure-report, nuclear-option]
     if: always() && github.ref == 'refs/heads/main'
     permissions:
       contents: read

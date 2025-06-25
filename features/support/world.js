@@ -266,10 +266,18 @@ After(async function(scenario) {
     const scenarioName = scenario.pickle.name.replace(/\s+/g, '-');
     const screenshotPath = await this.takeScreenshot(`failure-${scenarioName}`);
     
-    // Add screenshot to report if available (skip for now to avoid errors)
+    // Add screenshot to Allure/Cucumber report
     if (screenshotPath && fs.existsSync(screenshotPath)) {
       console.log(`Screenshot saved: ${screenshotPath}`);
-      // Note: this.attach function needs proper setup - for now just log
+      
+      try {
+        // Read screenshot file and attach to report
+        const screenshotBuffer = fs.readFileSync(screenshotPath);
+        this.attach(screenshotBuffer, 'image/png');
+        console.log(`Screenshot attached to test report: ${screenshotPath}`);
+      } catch (error) {
+        console.error('Failed to attach screenshot to report:', error.message);
+      }
     }
   }
   

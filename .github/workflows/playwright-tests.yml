@@ -279,6 +279,14 @@ jobs:
           path: collected-results/
           merge-multiple: true
 
+      - name: 📸 Download screenshots from failed tests
+        uses: actions/download-artifact@v4
+        with:
+          pattern: screenshots-*
+          path: collected-screenshots/
+          merge-multiple: true
+        continue-on-error: true
+
       - name: 🎭 Install Playwright browsers
         run: npx playwright install chromium
 
@@ -296,6 +304,18 @@ jobs:
           echo "🔄 Combining allure results from all browsers..."
           find collected-results -name "*.json" -path "*/allure-results/*" -exec cp {} allure-results/ \; || echo "No JSON files found"
           find collected-results -name "*.csv" -path "*/allure-results/*" -exec cp {} allure-results/ \; || echo "No CSV files found"
+          
+          # Copy screenshots to allure-results for inclusion in report
+          echo "📸 Including screenshots in Allure report..."
+          if [ -d "collected-screenshots" ]; then
+            mkdir -p allure-results/screenshots
+            find collected-screenshots -name "*.png" -exec cp {} allure-results/screenshots/ \; || echo "No screenshots found"
+            find collected-screenshots -name "*.jpg" -exec cp {} allure-results/screenshots/ \; || echo "No JPG screenshots found"
+            echo "✅ Screenshots copied to allure results"
+            ls -la allure-results/screenshots/ || echo "No screenshots directory"
+          else
+            echo "⚠️ No screenshots directory found - tests may have all passed"
+          fi
           
           # Merge environment properties from all browsers
           echo "🔄 Merging environment information..."

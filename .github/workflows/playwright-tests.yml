@@ -140,26 +140,26 @@ jobs:
           TEST_TYPE="${{ github.event.inputs.test_type }}"
           echo "🎯 Test type requested: ${TEST_TYPE:-'all (default)'}"
           
-          # Enhanced test execution commands with dual formatters and test summary
+          # Enhanced test execution commands with dual formatters (simplified for CI)
           TEST_COMMAND=""
           if [ "$TEST_TYPE" = "smoke" ]; then
             echo "🔍 Running smoke tests with $BROWSER..."
-            TEST_COMMAND="npx cucumber-js --profile headless --tags '@smoke' --format @cucumber/pretty-formatter --format allure-cucumberjs/reporter --format-options '{\"resultsDir\": \"allure-results\"}'"
+            TEST_COMMAND="npx cucumber-js --profile headless --tags '@smoke' --format @cucumber/pretty-formatter --format allure-cucumberjs/reporter"
           elif [ "$TEST_TYPE" = "login" ]; then
             echo "🔍 Running login tests with $BROWSER..."
-            TEST_COMMAND="npx cucumber-js --profile headless --tags '@login' --format @cucumber/pretty-formatter --format allure-cucumberjs/reporter --format-options '{\"resultsDir\": \"allure-results\"}'"
+            TEST_COMMAND="npx cucumber-js --profile headless --tags '@login' --format @cucumber/pretty-formatter --format allure-cucumberjs/reporter"
           elif [ "$TEST_TYPE" = "cart" ]; then
             echo "🔍 Running cart tests with $BROWSER..."
-            TEST_COMMAND="npx cucumber-js --profile headless --tags '@cart' --format @cucumber/pretty-formatter --format allure-cucumberjs/reporter --format-options '{\"resultsDir\": \"allure-results\"}'"
+            TEST_COMMAND="npx cucumber-js --profile headless --tags '@cart' --format @cucumber/pretty-formatter --format allure-cucumberjs/reporter"
           elif [ "$TEST_TYPE" = "checkout" ]; then
             echo "🔍 Running checkout tests with $BROWSER..."
-            TEST_COMMAND="npx cucumber-js --profile headless --tags '@checkout' --format @cucumber/pretty-formatter --format allure-cucumberjs/reporter --format-options '{\"resultsDir\": \"allure-results\"}'"
+            TEST_COMMAND="npx cucumber-js --profile headless --tags '@checkout' --format @cucumber/pretty-formatter --format allure-cucumberjs/reporter"
           elif [ "$TEST_TYPE" = "sorting" ]; then
             echo "🔍 Running sorting tests with $BROWSER..."
-            TEST_COMMAND="npx cucumber-js --profile headless --tags '@sorting' --format @cucumber/pretty-formatter --format allure-cucumberjs/reporter --format-options '{\"resultsDir\": \"allure-results\"}'"
+            TEST_COMMAND="npx cucumber-js --profile headless --tags '@sorting' --format @cucumber/pretty-formatter --format allure-cucumberjs/reporter"
           else
             echo "🔍 Running all tests with $BROWSER..."
-            TEST_COMMAND="npx cucumber-js --profile headless --format @cucumber/pretty-formatter --format allure-cucumberjs/reporter --format-options '{\"resultsDir\": \"allure-results\"}'"
+            TEST_COMMAND="npx cucumber-js --profile headless --format @cucumber/pretty-formatter --format allure-cucumberjs/reporter"
           fi
           
           echo "📋 Executing command: $TEST_COMMAND"

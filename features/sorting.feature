@@ -146,7 +146,7 @@ Feature: Product Sorting
     
     # Assert: Verify sorting is maintained
     Then the sorting should still be "Price (low to high)"
-    And Alice should see products still sorted by price from low to high
+    And Alice should see products sorted by price from low to high
 
   @authenticated @sorting @comprehensive-validation
   @allure.label.story:SortingValidation

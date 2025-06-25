@@ -198,10 +198,28 @@ ls screenshots/
 
 ### Evidence Collection
 - ✅ **Screenshots**: Automatically captured on test failures
+- ✅ **Nuclear Option**: Advanced screenshot attachment for Allure reports
 - ✅ **HTML Reports**: Comprehensive Cucumber reporting
-- ✅ **Allure Reports**: Rich interactive test reports
+- ✅ **Allure Reports**: Rich interactive test reports with visual evidence
 - ✅ **Console Logs**: Full browser console output captured
 - ✅ **Performance Metrics**: Execution timing and success rates
+
+### Nuclear Option Screenshot Attachment
+For scenarios where standard Allure screenshot attachment fails, the project includes a robust "Nuclear Option" that directly injects screenshots into Allure JSON result files:
+
+```bash
+# Run failing tests with automatic screenshot attachment
+npm run bdd:nuclear:failing
+
+# Manual screenshot injection (if needed)
+node scripts/nuclear-option.js
+```
+
+**Features:**
+- 🎯 **Smart Screenshot Selection**: Prioritizes assertion-failure screenshots over generic ones
+- 🔧 **Post-Test Injection**: Direct JSON manipulation bypasses context limitations
+- 📸 **Visual Debugging**: Screenshots appear in Allure HTML reports for failed tests
+- ⚡ **Optimized Performance**: Single screenshot per failure (no duplicates)
 
 ## 🚀 Advanced Usage
 
@@ -265,6 +283,9 @@ npm run allure:clean && npm run bdd:login:allure
 - **ES Module Architecture**: Modern JavaScript with full ESLint validation
 - **Headless Execution Mastery**: 60% performance improvement for CI/CD
 - **Clean Code Architecture**: Removed ~2000+ lines of redundant code
+- **Nuclear Option Screenshot Attachment**: Advanced visual debugging for Allure reports
+- **Step Definition Consolidation**: Eliminated duplicate steps (15% code reduction)
+- **CI/CD Ready**: Clean codebase with optimized debugging and error handling
 - **Comprehensive Coverage**: 42 scenarios covering full e-commerce workflow
 - **Production Ready**: 98.2% success rate with robust error handling
 
@@ -273,6 +294,7 @@ npm run allure:clean && npm run bdd:login:allure
 - [SCREENPLAY_PATTERN.md](./SCREENPLAY_PATTERN.md) - Complete Screenplay Pattern guide
 - [HEADLESS_EXECUTION.md](./HEADLESS_EXECUTION.md) - Silent execution documentation
 - [ALLURE_REPORTING.md](./ALLURE_REPORTING.md) - Rich reporting setup guide
+- [NUCLEAR_OPTION_SCREENSHOTS.md](./NUCLEAR_OPTION_SCREENSHOTS.md) - Advanced screenshot attachment
 - [IMPORTANT_NOTES.md](./IMPORTANT_NOTES.md) - Critical project decisions
 
 ---

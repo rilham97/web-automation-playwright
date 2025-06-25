@@ -60,7 +60,7 @@ Feature: Shopping Cart Management
     
     # Assert: Verify cart badge disappears and button changes back
     Then Alice should see the cart badge is not visible
-    And Alice should see the "Remove" button changed back to "Add to cart" for "Sauce Labs Backpack"
+    And Alice should see the "Remove" button changed to "Add to cart" for "Sauce Labs Backpack"
 
   @authenticated @cart @remove-from-cart-page
   @allure.label.story:RemoveFromCart
@@ -82,7 +82,7 @@ Feature: Shopping Cart Management
     # Assert: Verify item is removed and count updated
     Then Alice should see the cart badge showing "1" items
     And Alice should see "Sauce Labs Backpack" should not be visible in the cart
-    And Alice should see "Sauce Labs Bike Light" should still be in the cart
+    And Alice should see "Sauce Labs Bike Light" in the cart
 
   @authenticated @cart @empty-cart
   @allure.label.story:RemoveFromCart
@@ -105,7 +105,6 @@ Feature: Shopping Cart Management
     # Assert: Verify cart is completely empty
     Then Alice should see the cart badge is not visible
     And Alice should see the cart should be empty
-    And Alice should see no items in the cart list
 
   @authenticated @cart @cart-navigation
   @allure.label.story:CartNavigation
@@ -128,7 +127,7 @@ Feature: Shopping Cart Management
     
     # Assert: Verify back on products page with cart intact
     Then Alice should be on the products page
-    And Alice should see the cart badge still showing "1" items
+    And Alice should see the cart badge showing "1" items
 
   # ========== CART PERSISTENCE SCENARIOS ==========
 
@@ -150,7 +149,7 @@ Feature: Shopping Cart Management
     And Alice is redirected to the products page
     
     # Assert: Verify cart items are still present
-    Then Alice should see the cart badge still showing "1" items
+    Then Alice should see the cart badge showing "1" items
     When Alice navigates to the cart page
     Then Alice should see "Sauce Labs Backpack" in the cart
 
@@ -173,7 +172,7 @@ Feature: Shopping Cart Management
     And Alice is redirected to the products page
     
     # Assert: Verify both cart items are still present
-    Then Alice should see the cart badge still showing "2" items
+    Then Alice should see the cart badge showing "2" items
     When Alice navigates to the cart page
     Then Alice should see "Sauce Labs Backpack" in the cart
     And Alice should see "Sauce Labs Bike Light" in the cart
@@ -198,7 +197,7 @@ Feature: Shopping Cart Management
     And Alice is redirected to the products page
     
     # Assert: Verify all cart items persist
-    Then Alice should see the cart badge still showing "3" items
+    Then Alice should see the cart badge showing "3" items
     When Alice navigates to the cart page
     Then Alice should see "Sauce Labs Backpack" in the cart
     And Alice should see "Sauce Labs Bike Light" in the cart
@@ -221,7 +220,7 @@ Feature: Shopping Cart Management
     And Alice is redirected to the products page
     
     # Assert: Verify cart remains empty
-    Then Alice should see the cart badge should still not be visible
+    Then Alice should see the cart badge is not visible
     When Alice navigates to the cart page
     Then Alice should see the cart should be empty
 

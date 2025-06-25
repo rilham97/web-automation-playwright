@@ -9,8 +9,8 @@ import path from 'path';
 async function globalSetup(_config) { // eslint-disable-line no-unused-vars
   console.log('🚀 Starting Playwright Assessment Tests...');
   console.log('📋 Target Application: SauceDemo (https://www.saucedemo.com)');
-  console.log('🧪 Test Framework: Playwright with JavaScript');
-  console.log('🏗️  Design Pattern: Page Object Model (POM)');
+  console.log('🧪 Test Framework: Playwright with Cucumber BDD');
+  console.log('🎭 Design Pattern: Screenplay Pattern');
   
   // Create necessary directories if they don't exist
   const directories = [

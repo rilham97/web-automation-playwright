@@ -3,6 +3,9 @@
  * High-level interaction for making assertions in a readable way
  */
 
+import * as allure from 'allure-js-commons';
+import { ContentType } from 'allure-js-commons';
+
 class Ensure {
   constructor(actual, matcher) {
     this.actual = actual;
@@ -37,7 +40,54 @@ class Ensure {
     const result = this.matcher.matches(actualValue);
     
     if (!result.passed) {
+      // Try to attach screenshot if available (for failed assertions)
+      await this.attachScreenshotOnFailure(actor);
       throw new Error(`Assertion failed: ${result.message}`);
+    }
+  }
+
+  /**
+   * Attempts to attach a screenshot when assertion fails
+   * @param {Actor} actor - The actor that failed the assertion
+   */
+  async attachScreenshotOnFailure(actor) {
+    try {
+      // Capture screenshot immediately and save to file for later attachment
+      if (actor && actor.page) {
+        const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+        const screenshotPath = `screenshots/assertion-failure-${timestamp}.png`;
+        
+        // Ensure screenshots directory exists
+        const fs = await import('fs');
+        const path = await import('path');
+        const screenshotsDir = path.default.join(process.cwd(), 'screenshots');
+        if (!fs.default.existsSync(screenshotsDir)) {
+          fs.default.mkdirSync(screenshotsDir, { recursive: true });
+        }
+        
+        // Take screenshot and save to file
+        await actor.page.screenshot({ path: screenshotPath, fullPage: true });
+        
+        // Use file-based attachment as recommended in official docs
+        await allure.attachmentPath('Assertion Failure Screenshot', screenshotPath, {
+          contentType: ContentType.PNG,
+          fileExtension: 'png'
+        });
+        console.log(`✅ Screenshot attached to Allure report via file: ${screenshotPath}`);
+      } else if (globalThis.currentWorld && globalThis.currentWorld.currentActor && globalThis.currentWorld.currentActor.page) {
+        const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+        const screenshotPath = `screenshots/assertion-failure-fallback-${timestamp}.png`;
+        
+        await globalThis.currentWorld.currentActor.page.screenshot({ path: screenshotPath, fullPage: true });
+        
+        await allure.attachmentPath('Assertion Failure Screenshot', screenshotPath, {
+          contentType: ContentType.PNG,
+          fileExtension: 'png'
+        });
+        console.log(`✅ Screenshot attached to Allure report via file (fallback): ${screenshotPath}`);
+      }
+    } catch (error) {
+      console.error('❌ Failed to attach screenshot from Ensure matcher:', error.message);
     }
   }
 

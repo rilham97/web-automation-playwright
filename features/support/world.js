@@ -3,6 +3,9 @@ import { chromium, firefox, webkit } from '@playwright/test';
 import { URLS } from '../../src/constants/urls.js';
 import fs from 'fs';
 import path from 'path';
+// Import allure-cucumberjs first for proper context initialization
+import 'allure-cucumberjs';
+// Removed unused imports: allure, ContentType (Nuclear Option handles screenshot attachment)
 
 // Screenplay Pattern imports (minimal for testing)
 import { ActorManager, BrowseTheWeb, Navigate, Click, Enter, Ensure, CurrentUrl } from '../../src/screenplay/index.js';
@@ -33,6 +36,9 @@ class CustomWorld {
     this.actorManager = new ActorManager();
     this.currentActor = null;
     this.screenshotCount = 0;
+    
+    // Make this world instance globally available for screenshot attachment
+    globalThis.currentWorld = this;
   }
 
   /**
@@ -168,7 +174,6 @@ class CustomWorld {
       // Take screenshot
       await this.page.screenshot({ path: this.screenshotPath, fullPage: true });
       
-      console.log(`Screenshot saved: ${this.screenshotPath}`);
       return this.screenshotPath;
     }
     
@@ -191,7 +196,6 @@ class CustomWorld {
           fullPage: true
         });
 
-        console.log(`Screenshot saved: ${screenshotPath}`);
         return screenshotPath;
       } catch (error) {
         console.error('Failed to take screenshot:', error.message);
@@ -260,26 +264,16 @@ Before({ tags: '@authenticated' }, async function() {
 /**
  * After hook - runs after each scenario
  */
-After(async function(scenario) {
-  // Take screenshot on failure
+After({ name: 'Capture screenshot on failure' }, async function(scenario) {
+  // NOTE: Screenshot generation moved to Ensure.js for assertion failures
+  // The Nuclear Option script will handle screenshot attachment post-test
+  // This eliminates redundant screenshot generation and improves accuracy
+  
   if (scenario.result.status === Status.FAILED) {
-    const scenarioName = scenario.pickle.name.replace(/\s+/g, '-');
-    const screenshotPath = await this.takeScreenshot(`failure-${scenarioName}`);
-    
-    // Add screenshot to Allure/Cucumber report
-    if (screenshotPath && fs.existsSync(screenshotPath)) {
-      console.log(`Screenshot saved: ${screenshotPath}`);
-      
-      try {
-        // Read screenshot file and attach to report
-        const screenshotBuffer = fs.readFileSync(screenshotPath);
-        this.attach(screenshotBuffer, 'image/png');
-        console.log(`Screenshot attached to test report: ${screenshotPath}`);
-      } catch (error) {
-        console.error('Failed to attach screenshot to report:', error.message);
-      }
-    }
+    // Screenshot already captured by Ensure.js, Nuclear Option will handle attachment
   }
   
   await this.cleanup();
-}); 
+});
+
+// World setup complete - all screenshot attachment logic moved to After hook 

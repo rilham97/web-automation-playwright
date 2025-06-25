@@ -95,11 +95,7 @@ Then('{word} should see products sorted by price from low to high', async functi
   await actor.attemptsTo(Ensure.that(isCorrectlySorted).isTrue());
 });
 
-Then('{word} should see products still sorted by price from low to high', async function(actorName) {
-  const actor = await this.actorCalled(actorName);
-  const isCorrectlySorted = await actor.asks(ProductSorting.isPriceLowToHigh());
-  await actor.attemptsTo(Ensure.that(isCorrectlySorted).isTrue());
-});
+// Consolidated with "should see products sorted by price from low to high"
 
 Then('{word} should see products sorted by price from high to low', async function(actorName) {
   const actor = await this.actorCalled(actorName);

@@ -24,6 +24,9 @@ module.exports = {
       'features/support/**/*.js'  // Include all support files
     ],
     
+    // Initialize allure-cucumberjs for proper attachment support
+    requireModule: ['allure-cucumberjs'],
+    
     // Formatters and reporters (Allure configured separately via CLI)
     format: [
       'progress-bar',
@@ -62,6 +65,7 @@ module.exports = {
       'features/step_definitions/**/*.js', 
       'features/support/**/*.js'
     ],
+    requireModule: ['allure-cucumberjs'],
     format: [
       'progress-bar',
       '@cucumber/pretty-formatter',
@@ -91,6 +95,7 @@ module.exports = {
       'features/step_definitions/**/*.js', 
       'features/support/**/*.js'
     ],
+    requireModule: ['allure-cucumberjs'],
     format: [
       'progress-bar',
       'json:reports/cucumber/cucumber-report.json'
@@ -118,6 +123,7 @@ module.exports = {
       'features/step_definitions/**/*.js', 
       'features/support/**/*.js'
     ],
+    requireModule: ['allure-cucumberjs'],
     format: [
       'progress-bar',
       'json:reports/cucumber/cucumber-report.json',

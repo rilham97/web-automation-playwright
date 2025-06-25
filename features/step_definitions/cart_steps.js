@@ -22,6 +22,7 @@ import {
   ProductDetailPage,
   ProductDetailButton
 } from '../../src/screenplay/index.js';
+// Removed unused imports: allure, ContentType, fs (Nuclear Option handles screenshot attachment)
 
 // ==================== HELPER FUNCTIONS ====================
 
@@ -37,6 +38,8 @@ function createButtonSelector(productName, buttonType) {
     ? `[data-test="remove-${productId}"]`
     : `[data-test="add-to-cart-${productId}"]`;
 }
+
+// Hard insert function removed - Nuclear Option handles screenshot attachment
 
 // ==================== GIVEN Steps (Arrange) ====================
 
@@ -117,6 +120,8 @@ Then('{word} should see the cart badge showing {string} items', async function (
   );
 });
 
+// Consolidated with "should see the cart badge showing {string} items"
+
 Then('{word} should see the cart badge is not visible', async function (actorName) {
   const actor = await this.actorCalled(actorName);
   
@@ -125,21 +130,7 @@ Then('{word} should see the cart badge is not visible', async function (actorNam
   );
 });
 
-Then('{word} should see the cart badge still showing {string} items', async function (actorName, expectedCount) {
-  const actor = await this.actorCalled(actorName);
-  
-  await actor.attemptsTo(
-    Ensure.that(CartBadge.showsCount(expectedCount)).isTrue()
-  );
-});
-
-Then('{word} should see the cart badge should still not be visible', async function (actorName) {
-  const actor = await this.actorCalled(actorName);
-  
-  await actor.attemptsTo(
-    Ensure.that(CartBadge.isVisible()).isFalse()
-  );
-});
+// Consolidated with "should see the cart badge is not visible"
 
 Then('{word} should see the {string} button changed to {string} for {string}', async function (actorName, oldButton, newButton, itemName) {
   const actor = await this.actorCalled(actorName);
@@ -157,21 +148,7 @@ Then('{word} should see the {string} button changed to {string} for {string}', a
   );
 });
 
-Then('{word} should see the {string} button changed back to {string} for {string}', async function (actorName, oldButton, newButton, itemName) {
-  const actor = await this.actorCalled(actorName);
-  
-  // Verify the new button is visible using helper function
-  const newButtonSelector = createButtonSelector(itemName, newButton);
-  await actor.attemptsTo(
-    Ensure.that(Visibility.of(newButtonSelector)).isVisible()
-  );
-  
-  // Verify the old button is not visible using helper function
-  const oldButtonSelector = createButtonSelector(itemName, oldButton);
-  await actor.attemptsTo(
-    Ensure.that(Visibility.of(oldButtonSelector)).isNotVisible()
-  );
-});
+// Consolidated with "should see the {string} button changed to {string} for {string}"
 
 Then('{word} should see all added items showing {string} buttons instead of {string}', async function (actorName, expectedButton, _oldButton) { // eslint-disable-line no-unused-vars
   const actor = await this.actorCalled(actorName);
@@ -205,13 +182,7 @@ Then('{word} should see {string} should not be visible in the cart', async funct
   );
 });
 
-Then('{word} should see {string} should still be in the cart', async function (actorName, itemName) {
-  const actor = await this.actorCalled(actorName);
-  
-  await actor.attemptsTo(
-    Ensure.that(CartItems.contains(itemName)).isTrue()
-  );
-});
+// Consolidated with "should see {string} in the cart"
 
 Then('{word} should see the cart should be empty', async function (actorName) {
   const actor = await this.actorCalled(actorName);
@@ -221,13 +192,7 @@ Then('{word} should see the cart should be empty', async function (actorName) {
   );
 });
 
-Then('{word} should see no items in the cart list', async function (actorName) {
-  const actor = await this.actorCalled(actorName);
-  
-  await actor.attemptsTo(
-    Ensure.that(CartItems.isEmpty()).isTrue()
-  );
-});
+// Consolidated with "should see the cart should be empty"
 
 Then('{word} is redirected to the products page', async function (actorName) {
   const actor = await this.actorCalled(actorName);

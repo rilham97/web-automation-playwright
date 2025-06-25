@@ -47,7 +47,9 @@
     "allure:generate": "allure generate allure-results --clean -o allure-report",
     "allure:open": "allure open allure-report",
     "allure:serve": "allure serve allure-results",
-    "test:allure": "npx playwright test --reporter=allure-playwright && npm run allure:serve",
+    "nuclear:inject": "node scripts/nuclear-option.js",
+    "bdd:nuclear": "npx cucumber-js --profile headless --format allure-cucumberjs/reporter && node scripts/nuclear-option.js && npm run allure:generate",
+    "bdd:nuclear:failing": "npx cucumber-js --profile headless --tags '@different-user' --format allure-cucumberjs/reporter && node scripts/nuclear-option.js && npm run allure:generate",
     "bdd:allure:serve": "npm run bdd:allure && npm run allure:serve",
     "bdd:login:allure:serve": "npm run bdd:login:allure && npm run allure:serve",
     "bdd:login:basic:allure:serve": "npm run bdd:login:basic:allure && npm run allure:serve",
@@ -82,9 +84,9 @@
     "@cucumber/pretty-formatter": "^1.0.1",
     "@playwright/test": "^1.49.1",
     "allure-cucumberjs": "^3.3.0",
-    "allure-playwright": "^3.3.0",
     "cucumber-html-reporter": "^7.2.0",
     "eslint": "^9.29.0",
+    "glob": "^11.0.3",
     "husky": "^9.1.7"
   }
 }

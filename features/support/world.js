@@ -37,8 +37,54 @@ class CustomWorld {
     this.currentActor = null;
     this.screenshotCount = 0;
     
+    // Store scenario context for screenshot naming
+    this.scenarioContext = {
+      feature: null,
+      story: null,
+      scenario: null,
+      tags: []
+    };
+    
     // Make this world instance globally available for screenshot attachment
     globalThis.currentWorld = this;
+  }
+
+  /**
+   * Set scenario context for enhanced screenshot naming
+   * @param {Object} scenario - Cucumber scenario object
+   */
+  setScenarioContext(scenario) {
+    this.scenarioContext.scenario = scenario.pickle?.name || scenario.name || 'Unknown';
+    this.scenarioContext.tags = scenario.pickle?.tags?.map(tag => tag.name) || scenario.tags || [];
+    
+    // Extract feature name from gherkinDocument
+    if (scenario.gherkinDocument) {
+      this.scenarioContext.feature = scenario.gherkinDocument.feature?.name || 'Unknown';
+    }
+    
+    // Extract story from tags (e.g., @allure.label.story:AddToCart)
+    const storyTag = this.scenarioContext.tags.find(tag => tag.includes('allure.label.story:'));
+    if (storyTag) {
+      this.scenarioContext.story = storyTag.split(':')[1] || 'Unknown';
+    }
+  }
+
+  /**
+   * Generate a unique identifier for the current scenario
+   * @returns {string} Formatted scenario identifier
+   */
+  getScenarioIdentifier() {
+    const { feature, story, scenario } = this.scenarioContext;
+    
+    // Clean up names for filesystem safety
+    const cleanName = (name) => name ? name.replace(/[^a-zA-Z0-9\s]/g, '').replace(/\s+/g, '-') : 'Unknown';
+    
+    const parts = [];
+    if (feature && feature !== 'Unknown') parts.push(cleanName(feature));
+    if (story && story !== 'Unknown') parts.push(cleanName(story));
+    if (scenario && scenario !== 'Unknown') parts.push(cleanName(scenario));
+    
+    return parts.length > 0 ? parts.join('_') : 'Unknown-Test';
   }
 
   /**
@@ -229,6 +275,14 @@ class CustomWorld {
 setWorldConstructor(function(options) {
   // Pass the cucumber options to our CustomWorld
   return new CustomWorld(options);
+});
+
+/**
+ * Before hook to capture scenario context for enhanced screenshot naming
+ */
+Before(function(scenario) {
+  // Store scenario information for enhanced screenshot naming
+  this.setScenarioContext(scenario);
 });
 
 /**

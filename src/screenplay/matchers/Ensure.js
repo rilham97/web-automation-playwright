@@ -55,7 +55,14 @@ class Ensure {
       // Capture screenshot immediately and save to file for later attachment
       if (actor && actor.page) {
         const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-        const screenshotPath = `screenshots/assertion-failure-${timestamp}.png`;
+        
+        // Generate scenario-based filename with feature/story/scenario prefix
+        let scenarioPrefix = 'unknown-test';
+        if (globalThis.currentWorld && globalThis.currentWorld.getScenarioIdentifier) {
+          scenarioPrefix = globalThis.currentWorld.getScenarioIdentifier();
+        }
+        
+        const screenshotPath = `screenshots/assertion-failure-${scenarioPrefix}-${timestamp}.png`;
         
         // Ensure screenshots directory exists
         const fs = await import('fs');
@@ -73,10 +80,16 @@ class Ensure {
           contentType: ContentType.PNG,
           fileExtension: 'png'
         });
-        console.log(`✅ Screenshot attached to Allure report via file: ${screenshotPath}`);
       } else if (globalThis.currentWorld && globalThis.currentWorld.currentActor && globalThis.currentWorld.currentActor.page) {
         const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-        const screenshotPath = `screenshots/assertion-failure-fallback-${timestamp}.png`;
+        
+        // Generate scenario-based filename with feature/story/scenario prefix (fallback)
+        let scenarioPrefix = 'unknown-test';
+        if (globalThis.currentWorld && globalThis.currentWorld.getScenarioIdentifier) {
+          scenarioPrefix = globalThis.currentWorld.getScenarioIdentifier();
+        }
+        
+        const screenshotPath = `screenshots/assertion-failure-${scenarioPrefix}-fallback-${timestamp}.png`;
         
         await globalThis.currentWorld.currentActor.page.screenshot({ path: screenshotPath, fullPage: true });
         
@@ -84,7 +97,6 @@ class Ensure {
           contentType: ContentType.PNG,
           fileExtension: 'png'
         });
-        console.log(`✅ Screenshot attached to Allure report via file (fallback): ${screenshotPath}`);
       }
     } catch (error) {
       console.error('❌ Failed to attach screenshot from Ensure matcher:', error.message);

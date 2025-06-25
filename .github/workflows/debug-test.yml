@@ -27,18 +27,13 @@ jobs:
           node-version: '20'
 
       - name: 📋 Install dependencies
-        run: |
-          cd Software-Engineer-AI-Agent-Atlas/REPOS/new-project
-          npm ci
+        run: npm ci
 
       - name: 🎭 Install Playwright
-        run: |
-          cd Software-Engineer-AI-Agent-Atlas/REPOS/new-project
-          npx playwright install chromium
+        run: npx playwright install chromium
 
       - name: 🔍 Debug Test Execution
         run: |
-          cd Software-Engineer-AI-Agent-Atlas/REPOS/new-project
           
           echo "=== Environment Check ==="
           pwd
@@ -78,6 +73,5 @@ jobs:
         if: always()
         with:
           name: debug-results
-          path: |
-            Software-Engineer-AI-Agent-Atlas/REPOS/new-project/allure-results/
+          path: allure-results/
           retention-days: 1 

@@ -23,14 +23,14 @@ export default {
     // Feature files path
     paths: ['features/**/*.feature'],
     
-    // Step definitions path - now includes both traditional and screenplay patterns
-    require: [
+    // Step definitions path - ES module compatible
+    import: [
       'features/step_definitions/**/*.js', 
-      'features/support/**/*.js'  // Include all support files
+      'features/support/**/*.js'
     ],
     
-    // Initialize allure-cucumberjs for proper attachment support
-    requireModule: ['allure-cucumberjs'],
+    // Remove requireModule for now to avoid ES module conflicts
+    // requireModule: ['allure-cucumberjs'],
     
     // Formatters and reporters (Allure configured separately via CLI)
     format: [
@@ -66,11 +66,11 @@ export default {
   // 🤫 Silent/Headless execution - runs tests without opening browser UI
   headless: {
     paths: ['features/**/*.feature'],
-    require: [
+    import: [
       'features/step_definitions/**/*.js', 
       'features/support/**/*.js'
     ],
-    requireModule: ['allure-cucumberjs'],
+    // requireModule: ['allure-cucumberjs'],
     format: [
       'progress-bar',
       '@cucumber/pretty-formatter',
@@ -96,11 +96,11 @@ export default {
   // 🚀 Fast headless execution - optimized for speed
   fast: {
     paths: ['features/**/*.feature'],
-    require: [
+    import: [
       'features/step_definitions/**/*.js', 
       'features/support/**/*.js'
     ],
-    requireModule: ['allure-cucumberjs'],
+    // requireModule: ['allure-cucumberjs'],
     format: [
       'progress-bar',
       'json:reports/cucumber/cucumber-report.json'
@@ -124,11 +124,11 @@ export default {
   // Configuration for CI environment
   ci: {
     paths: ['features/**/*.feature'],
-    require: [
+    import: [
       'features/step_definitions/**/*.js', 
       'features/support/**/*.js'
     ],
-    requireModule: ['allure-cucumberjs'],
+    // requireModule: ['allure-cucumberjs'],
     format: [
       'progress-bar',
       'json:reports/cucumber/cucumber-report.json',

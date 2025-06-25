@@ -223,9 +223,23 @@ jobs:
           echo "Completed: $(date)" >> test-results/test-info.txt
           echo "Status: $TEST_STATUS" >> test-results/test-info.txt
           
+          # Check for failure screenshots (individual scenario failures)
+          SCREENSHOT_COUNT=0
+          if [ -d "screenshots" ]; then
+            SCREENSHOT_COUNT=$(find screenshots -name "failure-*.png" | wc -l)
+            if [ "$SCREENSHOT_COUNT" -gt 0 ]; then
+              echo "⚠️ Found $SCREENSHOT_COUNT failure screenshots - some scenarios failed"
+              echo "📸 Screenshots will be uploaded for analysis"
+              ls -la screenshots/failure-*.png || echo "No failure screenshots found with ls"
+            fi
+          fi
+          
           # Show final test-info.txt content
           echo "📄 Final test-info.txt content:"
           cat test-results/test-info.txt
+          
+          # Add screenshot info to test results
+          echo "Failure.Screenshots: $SCREENSHOT_COUNT" >> test-results/test-info.txt
           
           # Exit with error if tests failed (after collecting artifacts)
           if [ "$TEST_STATUS" = "FAILED" ]; then
@@ -233,13 +247,14 @@ jobs:
             exit 1
           fi
 
-      - name: 📸 Upload screenshots on failure
+      - name: 📸 Upload screenshots (if any exist)
         uses: actions/upload-artifact@v4
-        if: failure()
+        if: always()
         with:
           name: screenshots-${{ matrix.browser }}
           path: screenshots/
           retention-days: 7
+          if-no-files-found: ignore
 
       - name: 📁 Upload test results
         uses: actions/upload-artifact@v4

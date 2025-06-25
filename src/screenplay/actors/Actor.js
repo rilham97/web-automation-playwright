@@ -44,11 +44,13 @@ class Actor {
    * @returns {Promise<void>}
    */
   async attemptsTo(...activities) {
+    const isVerbose = this.shouldLogVerbosely();
+    
     for (const activity of activities) {
       try {
-        console.log(`${this.name} attempts to ${activity.toString()}`);
+        if (isVerbose) console.log(`${this.name} attempts to ${activity.toString()}`);
         await activity.performAs(this);
-        console.log(`${this.name} successfully ${activity.toString()}`);
+        if (isVerbose) console.log(`${this.name} successfully ${activity.toString()}`);
       } catch (error) {
         console.error(`${this.name} failed to ${activity.toString()}: ${error.message}`);
         throw error;
@@ -62,10 +64,12 @@ class Actor {
    * @returns {Promise<any>} The answer to the question
    */
   async asks(question) {
+    const isVerbose = this.shouldLogVerbosely();
+    
     try {
-      console.log(`${this.name} asks: ${question.toString()}`);
+      if (isVerbose) console.log(`${this.name} asks: ${question.toString()}`);
       const answer = await question.answeredBy(this);
-      console.log(`${this.name} receives answer: ${answer}`);
+      if (isVerbose) console.log(`${this.name} receives answer: ${answer}`);
       return answer;
     } catch (error) {
       console.error(`${this.name} failed to get answer for: ${question.toString()}: ${error.message}`);
@@ -98,6 +102,24 @@ class Actor {
    */
   remembers(key) {
     return this.notes.has(key);
+  }
+
+  /**
+   * Determines whether to log verbose actor actions
+   * @returns {boolean} True if verbose logging should be enabled
+   */
+  shouldLogVerbosely() {
+    // Check if running in headless mode (suppress verbose output)
+    const isHeadless = process.env.HEADLESS === 'true' || 
+                      process.argv.includes('--profile=headless') ||
+                      (process.argv.includes('--profile') && 
+                       process.argv[process.argv.indexOf('--profile') + 1] === 'headless');
+    
+    // Check if explicitly requested to be verbose
+    const isVerbose = process.env.VERBOSE === 'true' || process.argv.includes('--verbose');
+    
+    // Show verbose output if explicitly requested, or if NOT in headless mode
+    return isVerbose || !isHeadless;
   }
 
   /**

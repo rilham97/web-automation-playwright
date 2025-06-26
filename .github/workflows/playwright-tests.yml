@@ -161,11 +161,10 @@ jobs:
           
           # Check if debug mode is enabled
           DEBUG_MODE="${{ github.event.inputs.debug_mode }}"
-          DEBUG_PREFIX=""
           
           if [ "$DEBUG_MODE" = "true" ]; then
             echo "🐛 Debug mode enabled - enabling Cucumber debugging"
-            DEBUG_PREFIX="DEBUG=cucumber* "
+            export DEBUG=cucumber*
           else
             echo "ℹ️  Debug mode disabled - normal execution"
           fi
@@ -176,28 +175,31 @@ jobs:
           TEST_COMMAND=""
           if [ "$TEST_TYPE" = "smoke" ]; then
             echo "🔍 Running smoke tests with $BROWSER..."
-            TEST_COMMAND="${DEBUG_PREFIX}${BASE_CUCUMBER_CMD} --tags '@smoke'"
+            TEST_COMMAND="${BASE_CUCUMBER_CMD} --tags '@smoke'"
           elif [ "$TEST_TYPE" = "login" ]; then
             echo "🔍 Running login tests with $BROWSER..."
-            TEST_COMMAND="${DEBUG_PREFIX}${BASE_CUCUMBER_CMD} --tags '@login'"
+            TEST_COMMAND="${BASE_CUCUMBER_CMD} --tags '@login'"
           elif [ "$TEST_TYPE" = "cart" ]; then
             echo "🔍 Running cart tests with $BROWSER..."
-            TEST_COMMAND="${DEBUG_PREFIX}${BASE_CUCUMBER_CMD} --tags '@cart'"
+            TEST_COMMAND="${BASE_CUCUMBER_CMD} --tags '@cart'"
           elif [ "$TEST_TYPE" = "checkout" ]; then
             echo "🔍 Running checkout tests with $BROWSER..."
-            TEST_COMMAND="${DEBUG_PREFIX}${BASE_CUCUMBER_CMD} --tags '@checkout'"
+            TEST_COMMAND="${BASE_CUCUMBER_CMD} --tags '@checkout'"
           elif [ "$TEST_TYPE" = "sorting" ]; then
             echo "🔍 Running sorting tests with $BROWSER..."
-            TEST_COMMAND="${DEBUG_PREFIX}${BASE_CUCUMBER_CMD} --tags '@sorting'"
+            TEST_COMMAND="${BASE_CUCUMBER_CMD} --tags '@sorting'"
           elif [ "$TEST_TYPE" = "all" ]; then
             echo "🔍 Running ALL tests with $BROWSER (56 scenarios - may take long)..."
-            TEST_COMMAND="${DEBUG_PREFIX}${BASE_CUCUMBER_CMD}"
+            TEST_COMMAND="${BASE_CUCUMBER_CMD}"
           else
             echo "🔍 Unknown test type '$TEST_TYPE' - defaulting to ALL tests..."
-            TEST_COMMAND="${DEBUG_PREFIX}${BASE_CUCUMBER_CMD}"
+            TEST_COMMAND="${BASE_CUCUMBER_CMD}"
           fi
           
           echo "📋 Executing command: $TEST_COMMAND"
+          if [ "$DEBUG_MODE" = "true" ]; then
+            echo "🔍 Debug environment: DEBUG=$DEBUG"
+          fi
           
           # Debug: Check initial state
           echo "🔍 Pre-execution check:"
@@ -329,13 +331,17 @@ jobs:
             if [ "$DEBUG_MODE" != "true" ]; then
               echo "🐛 AUTOMATIC DEBUG: Test failed, running debug mode to gather more information..."
               
+              # Enable debug environment variable
+              export DEBUG=cucumber*
+              
               # Re-run with debugging enabled for the specific test type that failed
-              DEBUG_TEST_COMMAND="DEBUG=cucumber* npx cucumber-js --profile headless"
+              DEBUG_TEST_COMMAND="npx cucumber-js --profile headless"
               if [ "$TEST_TYPE" != "all" ]; then
                 DEBUG_TEST_COMMAND="${DEBUG_TEST_COMMAND} --tags '@${TEST_TYPE}'"
               fi
               
               echo "🔍 Debug command: $DEBUG_TEST_COMMAND"
+              echo "🔍 Debug environment: DEBUG=$DEBUG"
               echo "🔍 Running debug dry-run to check configuration..."
               
               # Run a dry-run with debug mode to get configuration details

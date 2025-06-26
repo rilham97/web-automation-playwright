@@ -21,6 +21,11 @@ on:
         - checkout
         - sorting
         - all
+      debug_mode:
+        description: 'Enable debug mode for troubleshooting'
+        required: false
+        default: false
+        type: boolean
 
 # Add workflow-level permissions for GitHub Pages
 permissions:
@@ -154,29 +159,42 @@ jobs:
             echo "🎯 Manual trigger - test type requested: $TEST_TYPE"
           fi
           
-          # Enhanced test execution commands with dual formatters (simplified for CI)
+          # Check if debug mode is enabled
+          DEBUG_MODE="${{ github.event.inputs.debug_mode }}"
+          DEBUG_PREFIX=""
+          
+          if [ "$DEBUG_MODE" = "true" ]; then
+            echo "🐛 Debug mode enabled - enabling Cucumber debugging"
+            DEBUG_PREFIX="DEBUG=cucumber* "
+          else
+            echo "ℹ️  Debug mode disabled - normal execution"
+          fi
+          
+          # Enhanced test execution commands with conditional debugging
+          BASE_CUCUMBER_CMD="npx cucumber-js --profile headless --format @cucumber/pretty-formatter --format allure-cucumberjs/reporter"
+          
           TEST_COMMAND=""
           if [ "$TEST_TYPE" = "smoke" ]; then
             echo "🔍 Running smoke tests with $BROWSER..."
-            TEST_COMMAND="npx cucumber-js --profile headless --tags '@smoke' --format @cucumber/pretty-formatter --format allure-cucumberjs/reporter"
+            TEST_COMMAND="${DEBUG_PREFIX}${BASE_CUCUMBER_CMD} --tags '@smoke'"
           elif [ "$TEST_TYPE" = "login" ]; then
             echo "🔍 Running login tests with $BROWSER..."
-            TEST_COMMAND="npx cucumber-js --profile headless --tags '@login' --format @cucumber/pretty-formatter --format allure-cucumberjs/reporter"
+            TEST_COMMAND="${DEBUG_PREFIX}${BASE_CUCUMBER_CMD} --tags '@login'"
           elif [ "$TEST_TYPE" = "cart" ]; then
             echo "🔍 Running cart tests with $BROWSER..."
-            TEST_COMMAND="npx cucumber-js --profile headless --tags '@cart' --format @cucumber/pretty-formatter --format allure-cucumberjs/reporter"
+            TEST_COMMAND="${DEBUG_PREFIX}${BASE_CUCUMBER_CMD} --tags '@cart'"
           elif [ "$TEST_TYPE" = "checkout" ]; then
             echo "🔍 Running checkout tests with $BROWSER..."
-            TEST_COMMAND="npx cucumber-js --profile headless --tags '@checkout' --format @cucumber/pretty-formatter --format allure-cucumberjs/reporter"
+            TEST_COMMAND="${DEBUG_PREFIX}${BASE_CUCUMBER_CMD} --tags '@checkout'"
           elif [ "$TEST_TYPE" = "sorting" ]; then
             echo "🔍 Running sorting tests with $BROWSER..."
-            TEST_COMMAND="npx cucumber-js --profile headless --tags '@sorting' --format @cucumber/pretty-formatter --format allure-cucumberjs/reporter"
+            TEST_COMMAND="${DEBUG_PREFIX}${BASE_CUCUMBER_CMD} --tags '@sorting'"
           elif [ "$TEST_TYPE" = "all" ]; then
             echo "🔍 Running ALL tests with $BROWSER (56 scenarios - may take long)..."
-            TEST_COMMAND="npx cucumber-js --profile headless --format @cucumber/pretty-formatter --format allure-cucumberjs/reporter"
+            TEST_COMMAND="${DEBUG_PREFIX}${BASE_CUCUMBER_CMD}"
           else
             echo "🔍 Unknown test type '$TEST_TYPE' - defaulting to ALL tests..."
-            TEST_COMMAND="npx cucumber-js --profile headless --format @cucumber/pretty-formatter --format allure-cucumberjs/reporter"
+            TEST_COMMAND="${DEBUG_PREFIX}${BASE_CUCUMBER_CMD}"
           fi
           
           echo "📋 Executing command: $TEST_COMMAND"
@@ -307,6 +325,29 @@ jobs:
             echo "📋 Last 30 lines of output:"
             tail -30 test-execution-log.txt
             
+            # Automatic debug mode on failure (if not already enabled)
+            if [ "$DEBUG_MODE" != "true" ]; then
+              echo "🐛 AUTOMATIC DEBUG: Test failed, running debug mode to gather more information..."
+              
+              # Re-run with debugging enabled for the specific test type that failed
+              DEBUG_TEST_COMMAND="DEBUG=cucumber* npx cucumber-js --profile headless"
+              if [ "$TEST_TYPE" != "all" ]; then
+                DEBUG_TEST_COMMAND="${DEBUG_TEST_COMMAND} --tags '@${TEST_TYPE}'"
+              fi
+              
+              echo "🔍 Debug command: $DEBUG_TEST_COMMAND"
+              echo "🔍 Running debug dry-run to check configuration..."
+              
+              # Run a dry-run with debug mode to get configuration details
+              if $DEBUG_TEST_COMMAND --dry-run 2>&1 | tee debug-dry-run.log; then
+                echo "✅ Debug dry-run completed - check debug-dry-run.log for details"
+              else
+                echo "❌ Debug dry-run also failed - deeper configuration issue"
+                echo "📋 Debug dry-run output:"
+                cat debug-dry-run.log
+              fi
+            fi
+            
             # Generate test summary even for failed runs
             echo "📊 Generating test summary for failed run..."
             if node scripts/test-summary.js; then
@@ -412,6 +453,8 @@ jobs:
           path: |
             test-results/
             allure-results/
+            test-execution-log.txt
+            debug-dry-run.log
           retention-days: 30
 
   nuclear-option:

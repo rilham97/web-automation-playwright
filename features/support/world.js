@@ -91,8 +91,6 @@ class CustomWorld {
    * Initialize browser and page objects
    */
   async init() {
-    console.log('🚀 [World] Starting browser initialization...');
-    
     // Get world parameters from multiple possible sources
     const worldParams = this.options?.parameters || this.parameters || {};
     
@@ -102,11 +100,8 @@ class CustomWorld {
                       process.argv.includes('--profile=headless') ||
                       process.argv.includes('--profile') && process.argv[process.argv.indexOf('--profile') + 1] === 'headless';
     
-    console.log(`🔧 [World] Headless mode: ${isHeadless}`);
-    
     // Determine which browser to use
     const browserType = process.env.BROWSER || 'chromium';
-    console.log(`🔧 [World] Browser type: ${browserType}`);
     
     let browserEngine;
     
@@ -132,7 +127,6 @@ class CustomWorld {
     
     // Add browser-specific configurations for CI stability
     if (process.env.CI) {
-      console.log('🔧 [World] CI environment detected, adding stability options');
       launchOptions.args = [
         '--no-sandbox',
         '--disable-setuid-sandbox',
@@ -149,30 +143,21 @@ class CustomWorld {
       }
     }
     
-    console.log('🔧 [World] Launch options:', JSON.stringify(launchOptions, null, 2));
-    
     // Launch browser with error handling
     try {
-      console.log(`🚀 [World] Launching ${browserType} browser...`);
       this.browser = await browserEngine.launch(launchOptions);
-      console.log(`✅ [World] ${browserType} browser launched successfully`);
     } catch (error) {
       console.error(`❌ [World] Failed to launch ${browserType} browser:`, error.message);
-      console.error('❌ [World] Error stack:', error.stack);
       try {
-        console.log('🔄 [World] Attempting Chromium fallback...');
         this.browser = await chromium.launch(launchOptions);
-        console.log('✅ [World] Chromium fallback successful');
       } catch (fallbackError) {
-        console.error('❌ [World] Even Chromium fallback failed:', fallbackError.message);
-        console.error('❌ [World] Fallback error stack:', fallbackError.stack);
+        console.error('❌ [World] Browser fallback failed:', fallbackError.message);
         throw fallbackError;
       }
     }
     
     // Create context
     try {
-      console.log('🚀 [World] Creating browser context...');
       this.context = await this.browser.newContext({
         viewport: { width: 1280, height: 720 },
         // Record video if enabled
@@ -183,60 +168,31 @@ class CustomWorld {
           }
         })
       });
-      console.log('✅ [World] Browser context created successfully');
     } catch (error) {
       console.error('❌ [World] Failed to create browser context:', error.message);
-      console.error('❌ [World] Context error stack:', error.stack);
       throw error;
     }
     
     // Create page
     try {
-      console.log('🚀 [World] Creating new page...');
       this.page = await this.context.newPage();
-      console.log('✅ [World] New page created successfully');
     } catch (error) {
       console.error('❌ [World] Failed to create new page:', error.message);
-      console.error('❌ [World] Page error stack:', error.stack);
       throw error;
     }
     
     // Navigate to base URL
     const baseURL = worldParams.baseURL || URLS.BASE;
-    console.log(`🚀 [World] Navigating to base URL: ${baseURL}`);
     
     try {
-      // Set a reasonable timeout for page navigation
       await this.page.goto(baseURL, { 
         waitUntil: 'domcontentloaded',
         timeout: 30000 
       });
-      console.log(`✅ [World] Successfully navigated to ${baseURL}`);
-      
-      // Verify the page loaded correctly
-      const currentUrl = this.page.url();
-      console.log(`✅ [World] Current page URL: ${currentUrl}`);
-      
-      // Check if page title loaded
-      const title = await this.page.title();
-      console.log(`✅ [World] Page title: '${title}'`);
-      
     } catch (error) {
       console.error(`❌ [World] Failed to navigate to ${baseURL}:`, error.message);
-      console.error('❌ [World] Navigation error stack:', error.stack);
-      
-      // Try to get more information about the failure
-      try {
-        const currentUrl = this.page.url();
-        console.error(`❌ [World] Current URL after failed navigation: ${currentUrl}`);
-      } catch (urlError) {
-        console.error('❌ [World] Could not get current URL:', urlError.message);
-      }
-      
       throw error;
     }
-    
-    console.log('🎉 [World] Browser initialization completed successfully');
   }
 
   /**
@@ -304,8 +260,7 @@ class CustomWorld {
         });
 
         return screenshotPath;
-      } catch (error) {
-        console.error('Failed to take screenshot:', error.message);
+      } catch {
         return null;
       }
     }
@@ -350,13 +305,10 @@ Before(function(scenario) {
  * Before hook - runs before each non-authenticated scenario
  */
 Before({ tags: 'not @authenticated' }, async function() {
-  console.log('🎬 [Before Hook] Starting non-authenticated scenario initialization...');
   try {
     await this.init();
-    console.log('✅ [Before Hook] Non-authenticated scenario initialization completed');
   } catch (error) {
     console.error('❌ [Before Hook] Non-authenticated scenario initialization failed:', error.message);
-    console.error('❌ [Before Hook] Error stack:', error.stack);
     throw error;
   }
 });
@@ -366,13 +318,10 @@ Before({ tags: 'not @authenticated' }, async function() {
  * Automatically logs in with standard user credentials using Screenplay Pattern
  */
 Before({ tags: '@authenticated' }, async function() {
-  console.log('🎬 [Before Hook] Starting authenticated scenario initialization...');
   try {
     await this.init();
-    console.log('✅ [Before Hook] Browser initialized for authenticated scenario');
     
     // Use Screenplay Pattern for authentication
-    console.log('🔐 [Before Hook] Performing authentication...');
     const actor = await this.actorCalled('Standard User');
     
     await actor.attemptsTo(
@@ -386,11 +335,8 @@ Before({ tags: '@authenticated' }, async function() {
     await actor.attemptsTo(
       Ensure.that(CurrentUrl.isInventoryPage()).isTrue()
     );
-    
-    console.log('✅ [Before Hook] Authentication completed successfully');
   } catch (error) {
     console.error('❌ [Before Hook] Authenticated scenario initialization failed:', error.message);
-    console.error('❌ [Before Hook] Error stack:', error.stack);
     throw error;
   }
 });

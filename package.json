@@ -70,21 +70,7 @@
     "bdd:checkout:allure:serve": "npm run bdd:checkout:allure && npm run allure:serve",
     "bdd:checkout:price-calculation:allure:serve": "npm run bdd:checkout:price-calculation:allure && npm run allure:serve",
     "bdd:sorting:allure:serve": "npm run bdd:sorting:allure && npm run allure:serve",
-    "debug:cucumber:sorting:validate": "DEBUG=cucumber* npx cucumber-js --profile headless --tags '@sorting' --dry-run",
-    "debug:cucumber:login:validate": "DEBUG=cucumber* npx cucumber-js --profile headless --tags '@login' --dry-run",
-    "debug:cucumber:cart:validate": "DEBUG=cucumber* npx cucumber-js --profile headless --tags '@cart' --dry-run",
-    "debug:cucumber:checkout:validate": "DEBUG=cucumber* npx cucumber-js --profile headless --tags '@checkout' --dry-run",
-    "debug:cucumber:smoke:validate": "DEBUG=cucumber* npx cucumber-js --profile headless --tags '@smoke' --dry-run",
-    "debug:cucumber:all:validate": "DEBUG=cucumber* npx cucumber-js --profile headless --dry-run",
-    "debug:cucumber:sorting": "DEBUG=cucumber* npx cucumber-js --profile headless --tags '@sorting' --format @cucumber/pretty-formatter",
-    "debug:cucumber:login": "DEBUG=cucumber* npx cucumber-js --profile headless --tags '@login' --format @cucumber/pretty-formatter",
-    "debug:cucumber:cart": "DEBUG=cucumber* npx cucumber-js --profile headless --tags '@cart' --format @cucumber/pretty-formatter",
-    "debug:cucumber:checkout": "DEBUG=cucumber* npx cucumber-js --profile headless --tags '@checkout' --format @cucumber/pretty-formatter",
-    "debug:cucumber:smoke": "DEBUG=cucumber* npx cucumber-js --profile headless --tags '@smoke' --format @cucumber/pretty-formatter",
-    "debug:cucumber:all": "DEBUG=cucumber* npx cucumber-js --profile headless --format @cucumber/pretty-formatter",
-    "debug:step-definitions": "node scripts/debug-step-definitions.js",
-    "debug:features": "node scripts/debug-features.js",
-    "debug:cucumber:import": "DEBUG=cucumber:import* npx cucumber-js --debug --dry-run --tags '@sorting'",
+
     "lint": "eslint src/ features/ --ext .js",
     "lint:fix": "eslint src/ features/ --ext .js --fix",
     "lint:check": "eslint src/ features/ --ext .js --max-warnings 0",
@@ -110,7 +96,6 @@
     "@playwright/test": "^1.49.1",
     "allure-cucumberjs": "^3.3.0",
     "eslint": "^9.29.0",
-    "glob": "^11.0.3",
     "husky": "^9.1.7"
   }
 }

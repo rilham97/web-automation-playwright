@@ -170,205 +170,65 @@ jobs:
             echo "ℹ️  Debug mode disabled - normal execution"
           fi
           
-          # Enhanced test execution commands with conditional debugging
-          BASE_CUCUMBER_CMD="npx cucumber-js --profile headless --format @cucumber/pretty-formatter --format allure-cucumberjs/reporter"
-          FORMAT_OPTIONS='--format-options {"resultsDir": "allure-results"}'
-          
-          TEST_COMMAND=""
-          if [ "$TEST_TYPE" = "smoke" ]; then
-            echo "🔍 Running smoke tests with $BROWSER..."
-            TEST_COMMAND="${BASE_CUCUMBER_CMD} ${FORMAT_OPTIONS} --tags '@smoke'"
-          elif [ "$TEST_TYPE" = "login" ]; then
-            echo "🔍 Running login tests with $BROWSER..."
-            TEST_COMMAND="${BASE_CUCUMBER_CMD} ${FORMAT_OPTIONS} --tags '@login'"
-          elif [ "$TEST_TYPE" = "cart" ]; then
-            echo "🔍 Running cart tests with $BROWSER..."
-            TEST_COMMAND="${BASE_CUCUMBER_CMD} ${FORMAT_OPTIONS} --tags '@cart'"
-          elif [ "$TEST_TYPE" = "checkout" ]; then
-            echo "🔍 Running checkout tests with $BROWSER..."
-            TEST_COMMAND="${BASE_CUCUMBER_CMD} ${FORMAT_OPTIONS} --tags '@checkout'"
-          elif [ "$TEST_TYPE" = "sorting" ]; then
-            echo "🔍 Running sorting tests with $BROWSER..."
-            TEST_COMMAND="${BASE_CUCUMBER_CMD} ${FORMAT_OPTIONS} --tags '@sorting'"
-          elif [ "$TEST_TYPE" = "simple" ]; then
-            echo "🔍 Running simple tests with $BROWSER (basic Cucumber without Screenplay)..."
-            TEST_COMMAND="${BASE_CUCUMBER_CMD} ${FORMAT_OPTIONS} --tags '@simple'"
-          elif [ "$TEST_TYPE" = "all" ]; then
-            echo "🔍 Running ALL tests with $BROWSER (56 scenarios - may take long)..."
-            TEST_COMMAND="${BASE_CUCUMBER_CMD} ${FORMAT_OPTIONS}"
-          else
-            echo "🔍 Unknown test type '$TEST_TYPE' - defaulting to ALL tests..."
-            TEST_COMMAND="${BASE_CUCUMBER_CMD} ${FORMAT_OPTIONS}"
-          fi
-          
-          echo "📋 Executing command: $TEST_COMMAND"
-          if [ "$DEBUG_MODE" = "true" ]; then
-            echo "🔍 Debug environment: DEBUG=$DEBUG"
-          fi
-          
-          # Debug: Check initial state
-          echo "🔍 Pre-execution check:"
-          ls -la allure-results/ 2>/dev/null || echo "allure-results directory empty/missing"
-          
-          # Debug: Check if cucumber can find scenarios
-          echo "🔍 Testing cucumber scenario discovery..."
-          if [ "$TEST_TYPE" = "sorting" ]; then
-            npx cucumber-js --profile headless --tags '@sorting' --dry-run | head -10
-          elif [ "$TEST_TYPE" = "login" ]; then
-            npx cucumber-js --profile headless --tags '@login' --dry-run | head -10
-          elif [ "$TEST_TYPE" = "cart" ]; then
-            npx cucumber-js --profile headless --tags '@cart' --dry-run | head -10
-          elif [ "$TEST_TYPE" = "checkout" ]; then
-            npx cucumber-js --profile headless --tags '@checkout' --dry-run | head -10
-          elif [ "$TEST_TYPE" = "smoke" ]; then
-            npx cucumber-js --profile headless --tags '@smoke' --dry-run | head -10
-          elif [ "$TEST_TYPE" = "simple" ]; then
-            npx cucumber-js --profile headless --tags '@simple' --dry-run | head -10
-          elif [ "$TEST_TYPE" = "all" ]; then
-            npx cucumber-js --profile headless --dry-run | head -10
-          else
-            npx cucumber-js --profile headless --dry-run | head -10
-          fi
-          
-          # Debug: Environment and dependencies verification
-          echo "🔍 === DEBUGGING CUCUMBER TAG EXECUTION ==="
+          # Clean test execution with minimal debugging
+          echo "🔍 Running $TEST_TYPE tests with $BROWSER..."
           echo "Working Directory: $(pwd)"
           echo "Node Version: $(node --version)"
-          echo "NPM Version: $(npm --version)"
           echo "Cucumber Version: $(npx cucumber-js --version)"
           
-          # Debug: File structure verification
-          echo "🔍 Feature files structure:"
-          find features -name "*.feature" | head -10
-          echo "🔍 Step definitions structure:"
-          find features/step_definitions -name "*.js" | head -10
+          # Clean up previous results
+          rm -rf allure-results/
+          mkdir -p allure-results/
           
-          # Debug: Dependencies verification
-          echo "🔍 Cucumber packages installed:"
-          npm list @cucumber/cucumber || echo "❌ @cucumber/cucumber not found"
-          npm list allure-cucumberjs || echo "❌ allure-cucumberjs not found"
-          
-          # Debug: Configuration file verification
-          echo "🔍 Cucumber config verification:"
-          ls -la cucumber.config.js
-          echo "🔍 Config content check:"
-          head -20 cucumber.config.js
-          
-          # Debug: Check if cucumber can find and parse features with tags
-          echo "🔍 === TAG DETECTION DEBUGGING ==="
-          echo "🔍 All available tags in features:"
-          grep -r "@" features/*.feature | grep -o "@[a-zA-Z][a-zA-Z0-9_]*" | sort | uniq
-          
-          echo "🔍 Scenarios with @sorting tag:"
-          grep -n "@sorting" features/*.feature || echo "❌ No @sorting tags found"
-          
-          # Debug: Test tag expression parsing
-          echo "🔍 === CUCUMBER TAG EXPRESSION TESTING ==="
-          echo "Testing tag expression parsing:"
-          npx cucumber-js --profile headless --tags '@sorting' --dry-run --format progress 2>&1 | head -20
-          
-          echo "🔍 Step definition loading test:"
-          npx cucumber-js --profile headless --tags '@sorting' --dry-run --format json > debug-output.json 2>&1 || echo "❌ JSON output failed"
-          
-          if [ -f debug-output.json ]; then
-            echo "🔍 JSON output size: $(wc -c debug-output.json)"
-            echo "🔍 First few lines of JSON:"
-            head -10 debug-output.json
+          # Build the test command
+          if [ "$TEST_TYPE" = "smoke" ]; then
+            TEST_COMMAND="npx cucumber-js --profile headless --format @cucumber/pretty-formatter --format allure-cucumberjs/reporter --format-options '{\"resultsDir\": \"allure-results\"}' --tags '@smoke'"
+          elif [ "$TEST_TYPE" = "login" ]; then
+            TEST_COMMAND="npx cucumber-js --profile headless --format @cucumber/pretty-formatter --format allure-cucumberjs/reporter --format-options '{\"resultsDir\": \"allure-results\"}' --tags '@login'"
+          elif [ "$TEST_TYPE" = "cart" ]; then
+            TEST_COMMAND="npx cucumber-js --profile headless --format @cucumber/pretty-formatter --format allure-cucumberjs/reporter --format-options '{\"resultsDir\": \"allure-results\"}' --tags '@cart'"
+          elif [ "$TEST_TYPE" = "checkout" ]; then
+            TEST_COMMAND="npx cucumber-js --profile headless --format @cucumber/pretty-formatter --format allure-cucumberjs/reporter --format-options '{\"resultsDir\": \"allure-results\"}' --tags '@checkout'"
+          elif [ "$TEST_TYPE" = "sorting" ]; then
+            TEST_COMMAND="npx cucumber-js --profile headless --format @cucumber/pretty-formatter --format allure-cucumberjs/reporter --format-options '{\"resultsDir\": \"allure-results\"}' --tags '@sorting'"
+          elif [ "$TEST_TYPE" = "simple" ]; then
+            TEST_COMMAND="npx cucumber-js --profile headless --format @cucumber/pretty-formatter --format allure-cucumberjs/reporter --format-options '{\"resultsDir\": \"allure-results\"}' --tags '@simple'"
+          elif [ "$TEST_TYPE" = "all" ]; then
+            TEST_COMMAND="npx cucumber-js --profile headless --format @cucumber/pretty-formatter --format allure-cucumberjs/reporter --format-options '{\"resultsDir\": \"allure-results\"}'"
+          else
+            echo "Unknown test type '$TEST_TYPE' - defaulting to ALL tests"
+            TEST_COMMAND="npx cucumber-js --profile headless --format @cucumber/pretty-formatter --format allure-cucumberjs/reporter --format-options '{\"resultsDir\": \"allure-results\"}'"
           fi
           
-          # Debug: Step definition matching test
-          echo "🔍 === STEP DEFINITION MATCHING TEST ==="
-          echo "Testing if step definitions can be imported:"
-          node -e "
-          try {
-            console.log('Testing step definition imports...');
-            const path = require('path');
-            const fs = require('fs');
-            
-            // Check if step definition files exist
-            const stepDefDir = path.join(process.cwd(), 'features/step_definitions');
-            console.log('Step def directory:', stepDefDir);
-            console.log('Directory exists:', fs.existsSync(stepDefDir));
-            
-            if (fs.existsSync(stepDefDir)) {
-              const files = fs.readdirSync(stepDefDir);
-              console.log('Step definition files:', files);
-              
-              // Try to check if sorting_steps.js has the expected patterns
-              const sortingStepsPath = path.join(stepDefDir, 'sorting_steps.js');
-              if (fs.existsSync(sortingStepsPath)) {
-                const content = fs.readFileSync(sortingStepsPath, 'utf8');
-                console.log('Sorting steps file exists, size:', content.length);
-                console.log('Contains Given patterns:', content.includes('Given'));
-                console.log('Contains When patterns:', content.includes('When'));
-                console.log('Contains Then patterns:', content.includes('Then'));
-              }
-            }
-          } catch (error) {
-            console.error('❌ Step definition check failed:', error.message);
-          }
-          " || echo "❌ Node.js step definition check failed"
+          echo "📋 Executing: $TEST_COMMAND"
           
-          # Debug: Manual scenario counting
-          echo "🔍 Manual scenario count verification:"
-          echo "Total scenarios in sorting.feature:"
-          grep -c "Scenario" features/sorting.feature || echo "❌ Could not count scenarios"
-          echo "Scenarios with @sorting tag:"
-          grep -c "@sorting" features/sorting.feature || echo "❌ Could not count @sorting scenarios"
-          
-          # Execute tests and capture results
-          if $TEST_COMMAND 2>&1 | tee test-execution-log.txt; then
-            TEST_STATUS="PASSED"
+          # Execute tests
+          echo "🚀 Starting test execution..."
+          if eval "$TEST_COMMAND" 2>&1 | tee test-execution-log.txt; then
             echo "✅ Tests completed successfully for $BROWSER"
+            TEST_STATUS="PASSED"
             
-            # Generate test summary for successful runs
-            echo "📊 Generating test summary..."
+            # Check results
+            echo "📊 Post-execution check:"
+            ls -la allure-results/ | head -10
+            echo "File count: $(find allure-results/ -name "*.json" | wc -l)"
+            
+            # Generate test summary
             if node scripts/test-summary.js; then
-              echo "📈 Test summary generated successfully"
+              echo "📈 Test summary generated"
             else
-              echo "⚠️ Failed to generate test summary (continuing anyway)"
+              echo "⚠️ Test summary failed (continuing)"
             fi
           else
-            TEST_STATUS="FAILED"
             echo "❌ Tests failed for $BROWSER"
-            echo "📋 Last 30 lines of output:"
-            tail -30 test-execution-log.txt
+            TEST_STATUS="FAILED"
             
-            # Automatic debug mode on failure (if not already enabled)
-            if [ "$DEBUG_MODE" != "true" ]; then
-              echo "🐛 AUTOMATIC DEBUG: Test failed, running debug mode to gather more information..."
-              
-              # Enable debug environment variable
-              export DEBUG=cucumber*
-              
-              # Re-run with debugging enabled for the specific test type that failed
-              DEBUG_TEST_COMMAND="npx cucumber-js --profile headless"
-              if [ "$TEST_TYPE" != "all" ]; then
-                DEBUG_TEST_COMMAND="${DEBUG_TEST_COMMAND} --tags '@${TEST_TYPE}'"
-              fi
-              
-              echo "🔍 Debug command: $DEBUG_TEST_COMMAND"
-              echo "🔍 Debug environment: DEBUG=$DEBUG"
-              echo "🔍 Running debug dry-run to check configuration..."
-              
-              # Run a dry-run with debug mode to get configuration details
-              if $DEBUG_TEST_COMMAND --dry-run 2>&1 | tee debug-dry-run.log; then
-                echo "✅ Debug dry-run completed - check debug-dry-run.log for details"
-              else
-                echo "❌ Debug dry-run also failed - deeper configuration issue"
-                echo "📋 Debug dry-run output:"
-                cat debug-dry-run.log
-              fi
-            fi
+            # Show last output
+            echo "📋 Last 20 lines of output:"
+            tail -20 test-execution-log.txt
             
-            # Generate test summary even for failed runs
-            echo "📊 Generating test summary for failed run..."
-            if node scripts/test-summary.js; then
-              echo "📈 Test summary generated successfully"
-            else
-              echo "⚠️ Failed to generate test summary (continuing anyway)"
-            fi
-            # Don't exit here - we want to collect artifacts even on failure
+            # Still try to generate summary for failed runs
+            node scripts/test-summary.js 2>/dev/null || echo "⚠️ Test summary failed"
           fi
           
           # Debug: Check post-execution state

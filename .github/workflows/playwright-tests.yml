@@ -171,33 +171,34 @@ jobs:
           fi
           
           # Enhanced test execution commands with conditional debugging
-          BASE_CUCUMBER_CMD="npx cucumber-js --profile headless --format @cucumber/pretty-formatter --format allure-cucumberjs/reporter --format-options '{\"resultsDir\": \"allure-results\"}'"
+          BASE_CUCUMBER_CMD="npx cucumber-js --profile headless --format @cucumber/pretty-formatter --format allure-cucumberjs/reporter"
+          FORMAT_OPTIONS='--format-options {"resultsDir": "allure-results"}'
           
           TEST_COMMAND=""
           if [ "$TEST_TYPE" = "smoke" ]; then
             echo "🔍 Running smoke tests with $BROWSER..."
-            TEST_COMMAND="${BASE_CUCUMBER_CMD} --tags '@smoke'"
+            TEST_COMMAND="${BASE_CUCUMBER_CMD} ${FORMAT_OPTIONS} --tags '@smoke'"
           elif [ "$TEST_TYPE" = "login" ]; then
             echo "🔍 Running login tests with $BROWSER..."
-            TEST_COMMAND="${BASE_CUCUMBER_CMD} --tags '@login'"
+            TEST_COMMAND="${BASE_CUCUMBER_CMD} ${FORMAT_OPTIONS} --tags '@login'"
           elif [ "$TEST_TYPE" = "cart" ]; then
             echo "🔍 Running cart tests with $BROWSER..."
-            TEST_COMMAND="${BASE_CUCUMBER_CMD} --tags '@cart'"
+            TEST_COMMAND="${BASE_CUCUMBER_CMD} ${FORMAT_OPTIONS} --tags '@cart'"
           elif [ "$TEST_TYPE" = "checkout" ]; then
             echo "🔍 Running checkout tests with $BROWSER..."
-            TEST_COMMAND="${BASE_CUCUMBER_CMD} --tags '@checkout'"
+            TEST_COMMAND="${BASE_CUCUMBER_CMD} ${FORMAT_OPTIONS} --tags '@checkout'"
           elif [ "$TEST_TYPE" = "sorting" ]; then
             echo "🔍 Running sorting tests with $BROWSER..."
-            TEST_COMMAND="${BASE_CUCUMBER_CMD} --tags '@sorting'"
+            TEST_COMMAND="${BASE_CUCUMBER_CMD} ${FORMAT_OPTIONS} --tags '@sorting'"
           elif [ "$TEST_TYPE" = "simple" ]; then
             echo "🔍 Running simple tests with $BROWSER (basic Cucumber without Screenplay)..."
-            TEST_COMMAND="${BASE_CUCUMBER_CMD} --tags '@simple'"
+            TEST_COMMAND="${BASE_CUCUMBER_CMD} ${FORMAT_OPTIONS} --tags '@simple'"
           elif [ "$TEST_TYPE" = "all" ]; then
             echo "🔍 Running ALL tests with $BROWSER (56 scenarios - may take long)..."
-            TEST_COMMAND="${BASE_CUCUMBER_CMD}"
+            TEST_COMMAND="${BASE_CUCUMBER_CMD} ${FORMAT_OPTIONS}"
           else
             echo "🔍 Unknown test type '$TEST_TYPE' - defaulting to ALL tests..."
-            TEST_COMMAND="${BASE_CUCUMBER_CMD}"
+            TEST_COMMAND="${BASE_CUCUMBER_CMD} ${FORMAT_OPTIONS}"
           fi
           
           echo "📋 Executing command: $TEST_COMMAND"

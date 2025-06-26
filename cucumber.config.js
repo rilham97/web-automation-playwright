@@ -54,7 +54,7 @@ export default {
       baseUrl: URLS.BASE
     }
   },
-
+  
   // Profile for headless execution (CI/CD)
   headless: {
     features: ['features/**/*.feature'],

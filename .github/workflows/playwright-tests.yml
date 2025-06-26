@@ -20,6 +20,7 @@ on:
         - cart
         - checkout
         - sorting
+        - simple
         - all
       debug_mode:
         description: 'Enable debug mode for troubleshooting'
@@ -59,7 +60,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        browser: [chromium]
+        browser: [chromium,firefox]
 
     steps:
       - name: 📥 Checkout code
@@ -170,7 +171,7 @@ jobs:
           fi
           
           # Enhanced test execution commands with conditional debugging
-          BASE_CUCUMBER_CMD="npx cucumber-js --profile headless --format @cucumber/pretty-formatter --format allure-cucumberjs/reporter"
+          BASE_CUCUMBER_CMD="npx cucumber-js --profile headless --format @cucumber/pretty-formatter --format allure-cucumberjs/reporter --format-options '{\"resultsDir\": \"allure-results\"}'"
           
           TEST_COMMAND=""
           if [ "$TEST_TYPE" = "smoke" ]; then
@@ -188,6 +189,9 @@ jobs:
           elif [ "$TEST_TYPE" = "sorting" ]; then
             echo "🔍 Running sorting tests with $BROWSER..."
             TEST_COMMAND="${BASE_CUCUMBER_CMD} --tags '@sorting'"
+          elif [ "$TEST_TYPE" = "simple" ]; then
+            echo "🔍 Running simple tests with $BROWSER (basic Cucumber without Screenplay)..."
+            TEST_COMMAND="${BASE_CUCUMBER_CMD} --tags '@simple'"
           elif [ "$TEST_TYPE" = "all" ]; then
             echo "🔍 Running ALL tests with $BROWSER (56 scenarios - may take long)..."
             TEST_COMMAND="${BASE_CUCUMBER_CMD}"
@@ -217,6 +221,8 @@ jobs:
             npx cucumber-js --profile headless --tags '@checkout' --dry-run | head -10
           elif [ "$TEST_TYPE" = "smoke" ]; then
             npx cucumber-js --profile headless --tags '@smoke' --dry-run | head -10
+          elif [ "$TEST_TYPE" = "simple" ]; then
+            npx cucumber-js --profile headless --tags '@simple' --dry-run | head -10
           elif [ "$TEST_TYPE" = "all" ]; then
             npx cucumber-js --profile headless --dry-run | head -10
           else

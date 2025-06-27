@@ -14,7 +14,7 @@ on:
         required: true
         default: 'smoke'
         type: choice
-        options: [smoke, login, cart, checkout, sorting, simple, all]
+        options: [smoke, login, cart, checkout, sorting, all]
       debug_mode:
         description: 'Enable debug mode for troubleshooting'
         required: false
@@ -32,11 +32,13 @@ env:
   PLAYWRIGHT_BROWSERS: 'chromium'
   RETENTION_DAYS_ARTIFACTS: 7
   RETENTION_DAYS_SCREENSHOTS: 7
+  GLOBAL_TIMEOUT_MINUTES: 90
 
 jobs:
   code-quality:
     name: 🔍 Code Quality
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - name: 📥 Checkout
         uses: actions/checkout@v4
@@ -57,6 +59,7 @@ jobs:
     name: 🧪 Test Execution
     runs-on: ubuntu-latest
     needs: code-quality
+    timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
@@ -116,6 +119,7 @@ jobs:
           "
 
       - name: 🏃‍♂️ Execute BDD tests
+        timeout-minutes: 20
         run: |
           # Setup environment
           if [ "$DEBUG_MODE" = "true" ]; then
@@ -145,7 +149,7 @@ jobs:
           FORMAT_OPTIONS="--format-options '{\"resultsDir\": \"allure-results\"}'"
           
           case "${{ env.TEST_TYPE }}" in
-            smoke|login|cart|checkout|sorting|simple)
+            smoke|login|cart|checkout|sorting)
               TAG_FILTER="--tags '@${{ env.TEST_TYPE }}'"
               ;;
             all|*)
@@ -240,6 +244,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: test-execution
     if: always()
+    timeout-minutes: 15
     
     steps:
       - name: 📥 Checkout
@@ -301,6 +306,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: [test-execution, nuclear-option]
     if: always()
+    timeout-minutes: 15
 
     steps:
       - name: 📥 Checkout
@@ -417,6 +423,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: report-generation
     if: always() && github.ref == 'refs/heads/main'
+    timeout-minutes: 10
     
     environment:
       name: github-pages

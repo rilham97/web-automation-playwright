@@ -49,6 +49,9 @@ export default {
     // Exit on first failure
     failFast: false,
     
+    // Timeout configuration (in milliseconds)
+    timeout: 60000, // 60 seconds per step
+    
     // Default world parameters
     worldParameters: {
       baseUrl: URLS.BASE
@@ -72,6 +75,7 @@ export default {
     retry: 0,
     parallel: 1,
     failFast: false,
+    timeout: 60000, // 60 seconds per step
     worldParameters: {
       baseUrl: URLS.BASE,
       headless: true
@@ -96,6 +100,7 @@ export default {
     retry: 0,
     parallel: 1,
     failFast: false,
+    timeout: 60000, // 60 seconds per step
     worldParameters: {
       baseUrl: URLS.BASE
     }
@@ -119,6 +124,7 @@ export default {
     retry: 0,
     parallel: 1,
     failFast: false,
+    timeout: 60000, // 60 seconds per step
     worldParameters: {
       baseUrl: URLS.BASE
     }
@@ -142,6 +148,7 @@ export default {
     retry: 0,
     parallel: 1,
     failFast: false,
+    timeout: 60000, // 60 seconds per step
     worldParameters: {
       baseUrl: URLS.BASE
     }
@@ -165,6 +172,7 @@ export default {
     retry: 0,
     parallel: 1,
     failFast: false,
+    timeout: 60000, // 60 seconds per step
     worldParameters: {
       baseUrl: URLS.BASE
     }
@@ -188,6 +196,7 @@ export default {
     retry: 0,
     parallel: 1,
     failFast: false,
+    timeout: 60000, // 60 seconds per step
     worldParameters: {
       baseUrl: URLS.BASE
     }

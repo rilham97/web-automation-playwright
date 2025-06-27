@@ -198,6 +198,405 @@ ls screenshots/
 
 ### Evidence Collection
 - ✅ **Screenshots**: Automatically captured on test failures
+- ✅ **Allure Reports**: Rich test execution reports with step details
+- ✅ **Cucumber HTML**: Business-readable test documentation
+
+## 📚 Tutorial: Adding New Test Cases with Screenplay Pattern
+
+This comprehensive guide will walk you through creating new test cases using the Screenplay Pattern, from feature files to implementation.
+
+### 🎯 Step-by-Step Tutorial
+
+#### **Step 1: Create the Feature File**
+
+Start by writing the business scenario in Gherkin syntax. Focus on **what** the user wants to achieve, not **how** they do it.
+
+**Example: Adding a "Product Reviews" feature**
+
+Create `features/product-reviews.feature`:
+```gherkin
+@reviews @smoke
+Feature: Product Reviews
+  As a customer
+  I want to read and write product reviews
+  So that I can make informed purchasing decisions
+
+  Background:
+    Given Alice is on the Sauce Demo login page
+    And Alice is a registered user with valid credentials
+    When Alice logs in with valid credentials
+    Then Alice should be on the products page
+
+  @view-reviews
+  Scenario: View existing product reviews
+    When Alice clicks on "Sauce Labs Backpack" product title
+    Then Alice should see the product detail page
+    And Alice should see customer reviews section
+    And Alice should see at least 3 reviews
+
+  @write-review
+  Scenario: Write a new product review
+    Given Alice is viewing "Sauce Labs Backpack" product details
+    When Alice writes a review "Great quality backpack!" with 5 stars
+    And Alice submits the review
+    Then Alice should see her review in the reviews list
+    And Alice should see "Review submitted successfully" message
+```
+
+**✅ Best Practices for Feature Files:**
+- Use **personas** (Alice, Bob) instead of "I" or "user"
+- Focus on **business value** and **user goals**
+- Use **declarative language** (what happens) not imperative (how to do it)
+- Group related scenarios with **tags** (@reviews, @view-reviews)
+- Add **Background** for common setup steps
+
+#### **Step 2: Create Step Definitions**
+
+Create `features/step_definitions/product_reviews_steps.js`:
+
+```javascript
+import { Given, When, Then } from '@cucumber/cucumber';
+import { Actor } from '../../src/screenplay/actors/Actor.js';
+import { Navigate } from '../../src/screenplay/interactions/Navigate.js';
+import { Click } from '../../src/screenplay/interactions/Click.js';
+import { Enter } from '../../src/screenplay/interactions/Enter.js';
+import { Ensure } from '../../src/screenplay/matchers/Ensure.js';
+import { ViewProductDetails } from '../../src/screenplay/tasks/ViewProductDetails.js';
+import { WriteReview } from '../../src/screenplay/tasks/WriteReview.js';
+import { ReviewsSection } from '../../src/screenplay/questions/ReviewsSection.js';
+import { ReviewMessage } from '../../src/screenplay/questions/ReviewMessage.js';
+
+// Navigate to product details
+Given('{actor} is viewing {string} product details', async function (actor, productName) {
+    await actor.attemptsTo(
+        ViewProductDetails.for(productName)
+    );
+});
+
+// Business action: Write a review
+When('{actor} writes a review {string} with {int} stars', async function (actor, reviewText, rating) {
+    await actor.attemptsTo(
+        WriteReview.withContent(reviewText).andRating(rating)
+    );
+});
+
+When('{actor} submits the review', async function (actor) {
+    await actor.attemptsTo(
+        Click.on('[data-test="submit-review"]')
+    );
+});
+
+// Information verification
+Then('{actor} should see customer reviews section', async function (actor) {
+    await actor.attemptsTo(
+        Ensure.that(ReviewsSection.isVisible()).isTrue()
+    );
+});
+
+Then('{actor} should see at least {int} reviews', async function (actor, minimumCount) {
+    const reviewCount = await actor.asks(ReviewsSection.count());
+    await actor.attemptsTo(
+        Ensure.that(reviewCount).isGreaterThan(minimumCount - 1)
+    );
+});
+
+Then('{actor} should see her review in the reviews list', async function (actor) {
+    const userReview = await actor.asks(ReviewsSection.userReview());
+    await actor.attemptsTo(
+        Ensure.that(userReview).isVisible()
+    );
+});
+
+Then('{actor} should see {string} message', async function (actor, expectedMessage) {
+    await actor.attemptsTo(
+        Ensure.that(ReviewMessage.displayed()).equals(expectedMessage)
+    );
+});
+```
+
+**✅ Step Definition Best Practices:**
+- Import **Screenplay components** at the top
+- Use **business language** in step implementations
+- Keep steps **focused** and **single-responsibility**
+- Use **Questions** for information retrieval
+- Use **Tasks** for complex business workflows
+- Use **Interactions** for simple browser actions
+
+#### **Step 3: Create Tasks (Business Workflows)**
+
+Create `src/screenplay/tasks/ViewProductDetails.js`:
+
+```javascript
+import { Navigate } from '../interactions/Navigate.js';
+import { Click } from '../interactions/Click.js';
+import { Ensure } from '../matchers/Ensure.js';
+import { Text } from '../questions/Text.js';
+
+export class ViewProductDetails {
+    constructor(productName) {
+        this.productName = productName;
+    }
+
+    static for(productName) {
+        return new ViewProductDetails(productName);
+    }
+
+    async performAs(actor) {
+        console.log(`${actor.name} attempts to view "${this.productName}" product details`);
+        
+        // Click on product title to view details
+        const productSelector = `.inventory_item:has-text("${this.productName}") .inventory_item_name`;
+        
+        await actor.attemptsTo(
+            Click.on(productSelector),
+            Ensure.that(Text.of('.inventory_details_name')).equals(this.productName)
+        );
+        
+        console.log(`${actor.name} successfully viewing product details for "${this.productName}"`);
+    }
+}
+```
+
+Create `src/screenplay/tasks/WriteReview.js`:
+
+```javascript
+import { Enter } from '../interactions/Enter.js';
+import { Click } from '../interactions/Click.js';
+
+export class WriteReview {
+    constructor(reviewText) {
+        this.reviewText = reviewText;
+        this.rating = 5; // default rating
+    }
+
+    static withContent(reviewText) {
+        return new WriteReview(reviewText);
+    }
+
+    andRating(stars) {
+        this.rating = stars;
+        return this;
+    }
+
+    async performAs(actor) {
+        console.log(`${actor.name} attempts to write a review: "${this.reviewText}" with ${this.rating} stars`);
+        
+        await actor.attemptsTo(
+            Enter.theValue(this.reviewText).into('[data-test="review-text"]'),
+            Click.on(`[data-test="star-rating-${this.rating}"]`)
+        );
+        
+        console.log(`${actor.name} successfully wrote review with ${this.rating} stars`);
+    }
+}
+```
+
+**✅ Task Best Practices:**
+- Use **fluent interface** pattern (`.for()`, `.withContent()`, `.andRating()`)
+- Include **console logging** for traceability
+- Combine **multiple interactions** into business workflows
+- Use **meaningful method names** that describe business intent
+- Make tasks **reusable** across different scenarios
+
+#### **Step 4: Create Questions (Information Retrieval)**
+
+Create `src/screenplay/questions/ReviewsSection.js`:
+
+```javascript
+import { Visibility } from './Visibility.js';
+
+export class ReviewsSection {
+    static isVisible() {
+        return new ReviewsSectionVisibility();
+    }
+
+    static count() {
+        return new ReviewsCount();
+    }
+
+    static userReview() {
+        return new UserReview();
+    }
+}
+
+class ReviewsSectionVisibility {
+    async answeredBy(actor) {
+        const page = actor.ability.page;
+        return await page.locator('[data-test="reviews-section"]').isVisible();
+    }
+}
+
+class ReviewsCount {
+    async answeredBy(actor) {
+        const page = actor.ability.page;
+        return await page.locator('[data-test="review-item"]').count();
+    }
+}
+
+class UserReview {
+    async answeredBy(actor) {
+        const page = actor.ability.page;
+        return page.locator('[data-test="user-review"]');
+    }
+}
+```
+
+Create `src/screenplay/questions/ReviewMessage.js`:
+
+```javascript
+import { Text } from './Text.js';
+
+export class ReviewMessage {
+    static displayed() {
+        return new ReviewMessageText();
+    }
+}
+
+class ReviewMessageText {
+    async answeredBy(actor) {
+        const page = actor.ability.page;
+        return await page.locator('[data-test="review-message"]').textContent();
+    }
+}
+```
+
+**✅ Question Best Practices:**
+- Questions **retrieve information** without changing application state
+- Use **descriptive static methods** (`.isVisible()`, `.count()`, `.displayed()`)
+- Return **actual data** or **Playwright locators**
+- Keep Questions **focused** on single pieces of information
+- Use **composition** to build complex queries
+
+#### **Step 5: Update Screenplay Index (Optional)**
+
+Add exports to `src/screenplay/index.js`:
+
+```javascript
+// ... existing exports ...
+
+// Tasks
+export { ViewProductDetails } from './tasks/ViewProductDetails.js';
+export { WriteReview } from './tasks/WriteReview.js';
+
+// Questions  
+export { ReviewsSection } from './questions/ReviewsSection.js';
+export { ReviewMessage } from './questions/ReviewMessage.js';
+```
+
+#### **Step 6: Add NPM Scripts**
+
+Update `package.json` to include new feature commands:
+
+```json
+{
+  "scripts": {
+    "bdd:reviews": "npx cucumber-js --tags '@reviews'",
+    "bdd:reviews:headless": "npx cucumber-js --profile headless --tags '@reviews' --format @cucumber/pretty-formatter --format allure-cucumberjs/reporter --format-options '{\"resultsDir\": \"allure-results\"}'",
+    "bdd:reviews:view": "npx cucumber-js --tags '@view-reviews'",
+    "bdd:reviews:write": "npx cucumber-js --tags '@write-review'"
+  }
+}
+```
+
+#### **Step 7: Run and Test**
+
+```bash
+# Test the new feature
+npm run bdd:reviews
+
+# Test in headless mode
+npm run bdd:reviews:headless
+
+# Test specific scenarios
+npm run bdd:reviews:view
+npm run bdd:reviews:write
+```
+
+### 🎭 Screenplay Pattern Best Practices
+
+#### **Do's ✅**
+- **Use business language** in all naming (Task, Question, method names)
+- **Focus on user intent** rather than implementation details
+- **Make components reusable** across different scenarios
+- **Use fluent interfaces** for better readability
+- **Include logging** for better traceability
+- **Keep single responsibility** for each component
+- **Use meaningful tags** to organize scenarios
+
+#### **Don'ts ❌**
+- **Don't expose technical details** in step definitions
+- **Don't hardcode selectors** in step definitions (use Tasks/Questions)
+- **Don't mix business logic** with browser interaction code
+- **Don't create God Tasks** that do everything
+- **Don't forget error handling** and validation
+- **Don't skip the Background** for common setup
+
+#### **Component Responsibilities**
+
+| Component | Responsibility | Example |
+|-----------|---------------|---------|
+| **Feature File** | Business scenarios in Gherkin | `Alice writes a review` |
+| **Step Definitions** | Glue between Gherkin and Screenplay | `actor.attemptsTo(WriteReview.withContent(text))` |
+| **Tasks** | Business workflows | `WriteReview`, `CompleteCheckout` |
+| **Questions** | Information retrieval | `ReviewsSection.count()`, `Text.of(selector)` |
+| **Interactions** | Basic browser actions | `Click.on(selector)`, `Enter.theValue(text)` |
+
+### 🔧 Debugging Tips
+
+#### **Common Issues & Solutions**
+
+1. **Step Definition Not Found**
+   ```bash
+   # Solution: Check import paths and export statements
+   import { WriteReview } from '../../src/screenplay/tasks/WriteReview.js';
+   ```
+
+2. **Actor Not Available**
+   ```bash
+   # Solution: Ensure world.js properly initializes actors
+   # Check features/support/world.js for actor registration
+   ```
+
+3. **Selector Not Working**
+   ```bash
+   # Solution: Use Playwright's inspector
+   npx playwright codegen https://www.saucedemo.com
+   ```
+
+4. **Test Timing Issues**
+   ```javascript
+   // Solution: Add proper waits in Tasks
+   await page.waitForLoadState('networkidle');
+   await page.waitForSelector('[data-test="element"]');
+   ```
+
+#### **Testing Your Implementation**
+
+```bash
+# Run single scenario for debugging
+npx cucumber-js --tags '@write-review' --fail-fast
+
+# Run with verbose output
+VERBOSE=true npm run bdd:reviews
+
+# Generate Allure report for analysis
+npm run bdd:reviews:headless && npm run allure:serve
+```
+
+### 🎯 Summary
+
+Following this tutorial, you've learned to:
+
+1. ✅ **Write business-focused Feature files** using Gherkin syntax
+2. ✅ **Create Step Definitions** that use Screenplay Pattern components  
+3. ✅ **Build reusable Tasks** for business workflows
+4. ✅ **Develop Questions** for information retrieval
+5. ✅ **Organize code** following Screenplay Pattern principles
+6. ✅ **Test and debug** your implementation
+
+The Screenplay Pattern makes your tests **business-readable**, **maintainable**, and **scalable**. Each component has a clear responsibility, making it easy for both technical and non-technical team members to understand and contribute to the test suite.
+
+**🚀 Next Steps**: Practice by adding more complex scenarios like user preferences, product comparisons, or checkout customizations!
 - ✅ **Nuclear Option**: Advanced screenshot attachment for Allure reports
 - ✅ **HTML Reports**: Comprehensive Cucumber reporting
 - ✅ **Allure Reports**: Rich interactive test reports with visual evidence

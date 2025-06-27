@@ -14,191 +14,71 @@ if (!fs.existsSync(resultsDir)) {
 }
 
 /**
- * Cucumber.js Configuration with Screenplay Pattern Support
- * Reference: https://cucumber.io/docs/cucumber/configuration/
- * Note: Allure reporting is configured via command-line in package.json scripts
+ * Streamlined Cucumber.js Configuration
+ * 
+ * Why only 3 profiles instead of 8?
+ * - Tags handle feature selection (--tags '@login', '@cart', etc.)
+ * - Profiles should only differ in execution environment, not content
+ * - This eliminates 150+ lines of duplicated configuration
+ * 
+ * Usage Examples:
+ * npx cucumber-js                              # default profile, visible browser
+ * npx cucumber-js --profile headless           # headless execution (CI/CD)
+ * npx cucumber-js --profile fast               # parallel execution
+ * npx cucumber-js --tags '@login'              # login tests only
+ * npx cucumber-js --profile headless --tags '@smoke'  # headless smoke tests
  */
+
+// Base configuration shared by all profiles
+const baseConfig = {
+  features: ['features/**/*.feature'],
+  import: [
+    'features/support/**/*.js',
+    'features/step_definitions/**/*.js'
+  ],
+  format: [
+    '@cucumber/pretty-formatter',
+    'allure-cucumberjs/reporter'
+  ],
+  formatOptions: {
+    resultsDir: resultsDir
+  },
+  retry: 0,
+  failFast: false,
+  timeout: 60000, // 60 seconds per step
+  worldParameters: {
+    baseUrl: URLS.BASE
+  }
+};
+
 export default {
+  // Default profile - local development with visible browser
   default: {
-    // Feature files
-    features: ['features/**/*.feature'],
-    
-    // Step definitions and support files - using glob patterns
-    import: [
-      'features/support/**/*.js',
-      'features/step_definitions/**/*.js'
-    ],
-    
-    // Default formatters
-    format: [
-      '@cucumber/pretty-formatter',
-      'allure-cucumberjs/reporter'
-    ],
-    
-    // Output directory for JSON results
-    formatOptions: {
-      resultsDir: resultsDir
-    },
-    
-    // Retry failed scenarios
-    retry: 0,
-    
-    // Parallel execution
+    ...baseConfig,
     parallel: 1,
-    
-    // Exit on first failure
-    failFast: false,
-    
-    // Timeout configuration (in milliseconds)
-    timeout: 60000, // 60 seconds per step
-    
-    // Default world parameters
     worldParameters: {
-      baseUrl: URLS.BASE
+      ...baseConfig.worldParameters,
+      headless: false
     }
   },
-  
-  // Profile for headless execution (CI/CD)
+
+  // Headless profile - CI/CD and background execution
   headless: {
-    features: ['features/**/*.feature'],
-    import: [
-      'features/support/**/*.js',
-      'features/step_definitions/**/*.js'
-    ],
-    format: [
-      '@cucumber/pretty-formatter',
-      'allure-cucumberjs/reporter'
-    ],
-    formatOptions: {
-      resultsDir: resultsDir
-    },
-    retry: 0,
+    ...baseConfig,
     parallel: 1,
-    failFast: false,
-    timeout: 60000, // 60 seconds per step
     worldParameters: {
-      baseUrl: URLS.BASE,
+      ...baseConfig.worldParameters,
       headless: true
     }
   },
 
-  // Profile for smoke tests
-  smoke: {
-    features: ['features/**/*.feature'],
-    import: [
-      'features/support/**/*.js',
-      'features/step_definitions/**/*.js'
-    ],
-    format: [
-      '@cucumber/pretty-formatter',
-      'allure-cucumberjs/reporter'
-    ],
-    formatOptions: {
-      resultsDir: resultsDir
-    },
-    tags: '@smoke',
-    retry: 0,
-    parallel: 1,
-    failFast: false,
-    timeout: 60000, // 60 seconds per step
+  // Fast profile - parallel execution for speed
+  fast: {
+    ...baseConfig,
+    parallel: 2,
     worldParameters: {
-      baseUrl: URLS.BASE
-    }
-  },
-
-  // Profile for login tests
-  login: {
-    features: ['features/**/*.feature'],
-    import: [
-      'features/support/**/*.js',
-      'features/step_definitions/**/*.js'
-    ],
-    format: [
-      '@cucumber/pretty-formatter',
-      'allure-cucumberjs/reporter'
-    ],
-    formatOptions: {
-      resultsDir: resultsDir
-    },
-    tags: '@login',
-    retry: 0,
-    parallel: 1,
-    failFast: false,
-    timeout: 60000, // 60 seconds per step
-    worldParameters: {
-      baseUrl: URLS.BASE
-    }
-  },
-
-  // Profile for cart tests
-  cart: {
-    features: ['features/**/*.feature'],
-    import: [
-      'features/support/**/*.js',
-      'features/step_definitions/**/*.js'
-    ],
-    format: [
-      '@cucumber/pretty-formatter',
-      'allure-cucumberjs/reporter'
-    ],
-    formatOptions: {
-      resultsDir: resultsDir
-    },
-    tags: '@cart',
-    retry: 0,
-    parallel: 1,
-    failFast: false,
-    timeout: 60000, // 60 seconds per step
-    worldParameters: {
-      baseUrl: URLS.BASE
-    }
-  },
-
-  // Profile for checkout tests
-  checkout: {
-    features: ['features/**/*.feature'],
-    import: [
-      'features/support/**/*.js',
-      'features/step_definitions/**/*.js'
-    ],
-    format: [
-      '@cucumber/pretty-formatter',
-      'allure-cucumberjs/reporter'
-    ],
-    formatOptions: {
-      resultsDir: resultsDir
-    },
-    tags: '@checkout',
-    retry: 0,
-    parallel: 1,
-    failFast: false,
-    timeout: 60000, // 60 seconds per step
-    worldParameters: {
-      baseUrl: URLS.BASE
-    }
-  },
-
-  // Profile for sorting tests
-  sorting: {
-    features: ['features/**/*.feature'],
-    import: [
-      'features/support/**/*.js',
-      'features/step_definitions/**/*.js'
-    ],
-    format: [
-      '@cucumber/pretty-formatter',
-      'allure-cucumberjs/reporter'
-    ],
-    formatOptions: {
-      resultsDir: resultsDir
-    },
-    tags: '@sorting',
-    retry: 0,
-    parallel: 1,
-    failFast: false,
-    timeout: 60000, // 60 seconds per step
-    worldParameters: {
-      baseUrl: URLS.BASE
+      ...baseConfig.worldParameters,
+      headless: true
     }
   }
 }; 

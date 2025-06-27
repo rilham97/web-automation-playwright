@@ -14,14 +14,7 @@ on:
         required: true
         default: 'smoke'
         type: choice
-        options:
-        - smoke
-        - login
-        - cart
-        - checkout
-        - sorting
-        - simple
-        - all
+        options: [smoke, login, cart, checkout, sorting, simple, all]
       debug_mode:
         description: 'Enable debug mode for troubleshooting'
         required: false
@@ -34,537 +27,371 @@ permissions:
   pages: write
   id-token: write
 
+env:
+  NODE_VERSION: '20'
+  PLAYWRIGHT_BROWSERS: 'chromium'
+  RETENTION_DAYS_ARTIFACTS: 7
+  RETENTION_DAYS_SCREENSHOTS: 7
+
 jobs:
   code-quality:
     name: 🔍 Code Quality
     runs-on: ubuntu-latest
     steps:
-      - name: 📥 Checkout code
+      - name: 📥 Checkout
         uses: actions/checkout@v4
 
-      - name: 📦 Setup Node.js
+      - name: 🔧 Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
 
-      - name: 📋 Install dependencies
+      - name: 📦 Install dependencies
         run: npm ci
 
-      - name: 🧹 Run ESLint
+      - name: 🧹 Lint check
         run: npm run lint:check
 
   test-execution:
-    name: 🧪 Tests (${{ matrix.browser }})
+    name: 🧪 Test Execution
     runs-on: ubuntu-latest
     needs: code-quality
     strategy:
       fail-fast: false
       matrix:
         browser: [chromium]
+    
+    env:
+      BROWSER: ${{ matrix.browser }}
+      CI: true
+      HEADLESS: true
+      TEST_TYPE: ${{ github.event.inputs.test_type || 'all' }}
+      DEBUG_MODE: ${{ github.event.inputs.debug_mode == 'true' }}
 
     steps:
-      - name: 📥 Checkout code
+      - name: 📥 Checkout
         uses: actions/checkout@v4
 
-      - name: 📦 Setup Node.js
+      - name: 🔧 Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
 
-      - name: 📋 Install dependencies
+      - name: 📦 Install dependencies
         run: npm ci
 
       - name: 🎭 Install Playwright browsers
         run: npx playwright install --with-deps ${{ matrix.browser }}
 
-      - name: 🔍 Verify Environment 
+      - name: 🔍 Environment verification
         run: |
-          echo "Node version: $(node -v)"
-          echo "NPM version: $(npm -v)"
-          echo "Playwright version: $(npx playwright --version)"
-          echo "Available browsers: $(npx playwright install --dry-run)"
-          echo "BROWSER environment variable: $BROWSER"
-          echo "CI environment variable: $CI"
-          echo "HEADLESS environment variable: $HEADLESS"
+          cat << 'EOF'
+          === Environment Information ===
+          Node: $(node -v)
+          NPM: $(npm -v) 
+          Playwright: $(npx playwright --version)
+          Browser: ${{ env.BROWSER }}
+          Test Type: ${{ env.TEST_TYPE }}
+          Debug Mode: ${{ env.DEBUG_MODE }}
+          EOF
 
-      - name: 🧪 Test Browser Compatibility
-        env:
-          BROWSER: ${{ matrix.browser }}
-          CI: true
-          HEADLESS: true
+      - name: 🧪 Browser compatibility test
         run: |
-          echo "Testing if $BROWSER browser can launch..."
           node -e "
           const { ${{ matrix.browser }} } = require('@playwright/test');
           (async () => {
             try {
-              console.log('Attempting to launch ${{ matrix.browser }}...');
+              console.log('🚀 Launching ${{ matrix.browser }}...');
               const browser = await ${{ matrix.browser }}.launch({ headless: true });
-              console.log('✅ ${{ matrix.browser }} launched successfully');
+              console.log('✅ Browser launched successfully');
               await browser.close();
-              console.log('✅ ${{ matrix.browser }} closed successfully');
+              console.log('✅ Browser closed successfully');
             } catch (error) {
-              console.error('❌ Failed to launch ${{ matrix.browser }}:', error.message);
+              console.error('❌ Browser test failed:', error.message);
               process.exit(1);
             }
           })();
           "
 
-      - name: 🧪 Test Cucumber Configuration
-        env:
-          BROWSER: ${{ matrix.browser }}
-          CI: true
-          HEADLESS: true
+      - name: 🏃‍♂️ Execute BDD tests
         run: |
-          echo "🔍 Testing cucumber configuration with $BROWSER..."
-          echo "Available npm scripts:"
-          npm run | grep bdd || echo "No BDD scripts found"
-          echo "Testing cucumber config:"
-          npx cucumber-js --version || echo "Cucumber not found"
-          echo "Environment check:"
-          echo "NODE_ENV: ${NODE_ENV:-not set}"
-          echo "BROWSER: ${BROWSER:-not set}"
-          echo "Cucumber profiles:"
-          npx cucumber-js --help | grep -A 10 "profile" || echo "No profile help found"
-
-      - name: 🏃‍♂️ Run BDD Tests
-        env:
-          BROWSER: ${{ matrix.browser }}
-          CI: true
-          HEADLESS: true
-        run: |
-          echo "🎭 Starting BDD tests with $BROWSER browser..."
-          
-          # Create directories to ensure artifacts exist with proper permissions
-          mkdir -p test-results allure-results reports screenshots
-          chmod 755 test-results allure-results reports screenshots
-          
-          # Verify allure-cucumberjs module is properly installed
-          echo "🔍 Verifying allure-cucumberjs installation..."
-          npm list allure-cucumberjs || echo "⚠️ allure-cucumberjs not found in dependencies"
-          
-          # Create a basic test status file
-          echo "Browser: $BROWSER" > test-results/test-info.txt
-          echo "Started: $(date)" >> test-results/test-info.txt
-          
-          # Run tests based on input or default to all tests for push/PR triggers
-          TEST_TYPE="${{ github.event.inputs.test_type }}"
-          
-          # Fix: Handle different trigger types properly
-          if [ -z "$TEST_TYPE" ] || [ "$TEST_TYPE" = "null" ]; then
-            # Push/PR triggers: default to 'all' tests for comprehensive coverage
-            TEST_TYPE="all"
-            echo "🎯 Trigger: ${{ github.event_name }} - defaulting to ALL tests"
-          else
-            # Manual workflow dispatch: use selected test type
-            echo "🎯 Manual trigger - test type requested: $TEST_TYPE"
-          fi
-          
-          # Check if debug mode is enabled
-          DEBUG_MODE="${{ github.event.inputs.debug_mode }}"
-          
+          # Setup environment
           if [ "$DEBUG_MODE" = "true" ]; then
-            echo "🐛 Debug mode enabled - enabling Cucumber debugging"
             export DEBUG=cucumber*
-          else
-            echo "ℹ️  Debug mode disabled - normal execution"
+            echo "🐛 Debug mode enabled"
           fi
           
-          # Clean test execution with minimal debugging
-          echo "🔍 Running $TEST_TYPE tests with $BROWSER..."
-          echo "Working Directory: $(pwd)"
-          echo "Node Version: $(node --version)"
-          echo "Cucumber Version: $(npx cucumber-js --version)"
+          # Create required directories
+          mkdir -p {test-results,allure-results,reports,screenshots}
+          chmod 755 {test-results,allure-results,reports,screenshots}
           
-          # Clean up previous results
-          rm -rf allure-results/
-          mkdir -p allure-results/
+          # Generate test info
+          cat > test-results/test-info.txt << EOF
+          Browser: ${{ env.BROWSER }}
+          Test Type: ${{ env.TEST_TYPE }}
+          Started: $(date)
+          Trigger: ${{ github.event_name }}
+          Actor: @${{ github.actor }}
+          EOF
           
-          # Build the test command
-          if [ "$TEST_TYPE" = "smoke" ]; then
-            TEST_COMMAND="npx cucumber-js --profile headless --format @cucumber/pretty-formatter --format allure-cucumberjs/reporter --format-options '{\"resultsDir\": \"allure-results\"}' --tags '@smoke'"
-          elif [ "$TEST_TYPE" = "login" ]; then
-            TEST_COMMAND="npx cucumber-js --profile headless --format @cucumber/pretty-formatter --format allure-cucumberjs/reporter --format-options '{\"resultsDir\": \"allure-results\"}' --tags '@login'"
-          elif [ "$TEST_TYPE" = "cart" ]; then
-            TEST_COMMAND="npx cucumber-js --profile headless --format @cucumber/pretty-formatter --format allure-cucumberjs/reporter --format-options '{\"resultsDir\": \"allure-results\"}' --tags '@cart'"
-          elif [ "$TEST_TYPE" = "checkout" ]; then
-            TEST_COMMAND="npx cucumber-js --profile headless --format @cucumber/pretty-formatter --format allure-cucumberjs/reporter --format-options '{\"resultsDir\": \"allure-results\"}' --tags '@checkout'"
-          elif [ "$TEST_TYPE" = "sorting" ]; then
-            TEST_COMMAND="npx cucumber-js --profile headless --format @cucumber/pretty-formatter --format allure-cucumberjs/reporter --format-options '{\"resultsDir\": \"allure-results\"}' --tags '@sorting'"
-          elif [ "$TEST_TYPE" = "simple" ]; then
-            TEST_COMMAND="npx cucumber-js --profile headless --format @cucumber/pretty-formatter --format allure-cucumberjs/reporter --format-options '{\"resultsDir\": \"allure-results\"}' --tags '@simple'"
-          elif [ "$TEST_TYPE" = "all" ]; then
-            TEST_COMMAND="npx cucumber-js --profile headless --format @cucumber/pretty-formatter --format allure-cucumberjs/reporter --format-options '{\"resultsDir\": \"allure-results\"}'"
-          else
-            echo "Unknown test type '$TEST_TYPE' - defaulting to ALL tests"
-            TEST_COMMAND="npx cucumber-js --profile headless --format @cucumber/pretty-formatter --format allure-cucumberjs/reporter --format-options '{\"resultsDir\": \"allure-results\"}'"
-          fi
+          # Clean previous results
+          rm -rf allure-results/*
+          
+          # Build and execute test command
+          BASE_CMD="npx cucumber-js --profile headless"
+          FORMATTERS="--format @cucumber/pretty-formatter --format allure-cucumberjs/reporter"
+          FORMAT_OPTIONS="--format-options '{\"resultsDir\": \"allure-results\"}'"
+          
+          case "${{ env.TEST_TYPE }}" in
+            smoke|login|cart|checkout|sorting|simple)
+              TAG_FILTER="--tags '@${{ env.TEST_TYPE }}'"
+              ;;
+            all|*)
+              TAG_FILTER=""
+              ;;
+          esac
+          
+          TEST_COMMAND="$BASE_CMD $FORMATTERS $FORMAT_OPTIONS $TAG_FILTER"
           
           echo "📋 Executing: $TEST_COMMAND"
-          
-          # Execute tests
           echo "🚀 Starting test execution..."
-          if eval "$TEST_COMMAND" 2>&1 | tee test-execution-log.txt; then
-            echo "✅ Tests completed successfully for $BROWSER"
+          
+          if eval "$TEST_COMMAND" 2>&1 | tee test-execution.log; then
+            echo "✅ Tests completed successfully"
             TEST_STATUS="PASSED"
-            
-            # Check results
-            echo "📊 Post-execution check:"
-            ls -la allure-results/ | head -10
-            echo "File count: $(find allure-results/ -name "*.json" | wc -l)"
-            
-            # Generate test summary
-            if node scripts/test-summary.js; then
-              echo "📈 Test summary generated"
-            else
-              echo "⚠️ Test summary failed (continuing)"
-            fi
           else
-            echo "❌ Tests failed for $BROWSER"
+            echo "❌ Tests failed"
             TEST_STATUS="FAILED"
-            
-            # Show last output
-            echo "📋 Last 20 lines of output:"
-            tail -20 test-execution-log.txt
-            
-            # Still try to generate summary for failed runs
-            node scripts/test-summary.js 2>/dev/null || echo "⚠️ Test summary failed"
+            tail -20 test-execution.log
           fi
           
-          # Debug: Check post-execution state
-          echo "🔍 Post-execution check:"
-          echo "Working directory: $(pwd)"
-          echo "Allure results count: $(find allure-results -name '*.json' 2>/dev/null | wc -l)"
-          echo "Test execution log size: $(wc -l test-execution-log.txt 2>/dev/null || echo '0 lines')"
+          # Update test info
+          cat >> test-results/test-info.txt << EOF
+          Completed: $(date)
+          Status: $TEST_STATUS
+          Results Count: $(find allure-results -name '*.json' 2>/dev/null | wc -l)
+          Screenshots: $(find screenshots -name 'failure-*.png' 2>/dev/null | wc -l)
+          EOF
           
-          # Verify that test artifacts were actually generated
-          echo "📁 Checking what was generated:"
-          ls -la test-results/ || echo "No test-results directory"
-          ls -la allure-results/ || echo "No allure-results directory"  
-          ls -la reports/ || echo "No reports directory"
+          # Generate test summary
+          node scripts/test-summary.js 2>/dev/null || echo "⚠️ Test summary failed"
           
-          # Check if allure results were generated
-          if [ -d "allure-results" ] && [ "$(ls -A allure-results 2>/dev/null)" ]; then
-            echo "✅ Allure results generated successfully"
-            ls -la allure-results/
-          else
-            echo "⚠️ No allure results generated - tests may not have run properly"
-          fi
-          
-          # Create Allure environment.properties for this browser
+          # Create environment files for Allure
           cat > allure-results/environment.properties << EOF
-          Browser=$BROWSER
+          Browser=${{ env.BROWSER }}
           Platform=ubuntu-latest
           CI=true
           Headless=true
           Node.Version=$(node -v)
           Playwright.Version=$(npx playwright --version)
-          Test.Type=${TEST_TYPE:-all}
+          Test.Type=${{ env.TEST_TYPE }}
           Execution.Date=$(date -u +"%Y-%m-%d %H:%M:%S UTC")
-          Triggered.By=@$GITHUB_ACTOR
-          Trigger.Event=$GITHUB_EVENT_NAME
+          Triggered.By=@${{ github.actor }}
+          Trigger.Event=${{ github.event_name }}
           EOF
           
-          # Create Allure executor.json for this browser  
           cat > allure-results/executor.json << EOF
           {
-            "name": "GitHub Actions - $BROWSER",
-            "type": "github-actions", 
-            "url": "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID",
-            "buildOrder": $GITHUB_RUN_NUMBER,
-            "buildName": "$BROWSER Browser Tests - @$GITHUB_ACTOR",
-            "buildUrl": "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID",
-            "reportName": "Playwright BDD - $BROWSER",
-            "reportUrl": "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID",
-            "triggeredBy": "$GITHUB_ACTOR",
-            "triggerEvent": "$GITHUB_EVENT_NAME"
+            "name": "GitHub Actions - ${{ env.BROWSER }}",
+            "type": "github-actions",
+            "url": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}",
+            "buildOrder": ${{ github.run_number }},
+            "buildName": "${{ env.BROWSER }} Tests - @${{ github.actor }}",
+            "buildUrl": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}",
+            "reportName": "Playwright BDD - ${{ env.BROWSER }}",
+            "triggeredBy": "${{ github.actor }}",
+            "triggerEvent": "${{ github.event_name }}",
+            "runId": "${{ github.run_id }}",
+            "runNumber": ${{ github.run_number }}
           }
           EOF
           
-          # Record completion and status
-          echo "Completed: $(date)" >> test-results/test-info.txt
-          echo "Status: $TEST_STATUS" >> test-results/test-info.txt
-          
-          # Check for failure screenshots (individual scenario failures)
-          SCREENSHOT_COUNT=0
-          if [ -d "screenshots" ]; then
-            SCREENSHOT_COUNT=$(find screenshots -name "failure-*.png" | wc -l)
-            if [ "$SCREENSHOT_COUNT" -gt 0 ]; then
-              echo "⚠️ Found $SCREENSHOT_COUNT failure screenshots - some scenarios failed"
-              echo "📸 Screenshots will be uploaded for analysis"
-              ls -la screenshots/failure-*.png || echo "No failure screenshots found with ls"
-            fi
-          fi
-          
-          # Show final test-info.txt content
-          echo "📄 Final test-info.txt content:"
+          # Show final status
+          echo "📊 Final Results:"
           cat test-results/test-info.txt
           
-          # Add screenshot info to test results
-          echo "Failure.Screenshots: $SCREENSHOT_COUNT" >> test-results/test-info.txt
-          
-          # Exit with error if tests failed (after collecting artifacts)
-          if [ "$TEST_STATUS" = "FAILED" ]; then
-            echo "💥 Failing job due to test failures"
-            exit 1
-          fi
+          # Exit with error if tests failed
+          [ "$TEST_STATUS" = "FAILED" ] && exit 1 || exit 0
 
-      - name: 📸 Upload screenshots (if any exist)
-        uses: actions/upload-artifact@v4
+      - name: 📸 Upload screenshots
         if: always()
+        uses: actions/upload-artifact@v4
         with:
           name: screenshots-${{ matrix.browser }}
           path: screenshots/
-          retention-days: 7
+          retention-days: ${{ env.RETENTION_DAYS_SCREENSHOTS }}
           if-no-files-found: ignore
 
       - name: 📁 Upload test results
-        uses: actions/upload-artifact@v4
         if: always()
+        uses: actions/upload-artifact@v4
         with:
           name: test-results-${{ matrix.browser }}
           path: |
             test-results/
             allure-results/
-            test-execution-log.txt
-            debug-dry-run.log
-          retention-days: 30
+            test-execution.log
+          retention-days: ${{ env.RETENTION_DAYS_ARTIFACTS }}
 
   nuclear-option:
-    name: 🚀 Nuclear Option - Screenshot Injection
+    name: 🚀 Screenshot Enhancement
     runs-on: ubuntu-latest
     needs: test-execution
     if: always()
-
+    
     steps:
-      - name: 📥 Checkout code
+      - name: 📥 Checkout
         uses: actions/checkout@v4
 
-      - name: 📦 Setup Node.js
+      - name: 🔧 Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
 
-      - name: 📋 Install dependencies
+      - name: 📦 Install dependencies
         run: npm ci
 
-      - name: ⬇️ Download test results
+      - name: ⬇️ Download artifacts
         uses: actions/download-artifact@v4
         with:
-          pattern: test-results-*
-          path: downloaded-results/
+          pattern: '{test-results,screenshots}-*'
+          path: artifacts/
           merge-multiple: true
 
-      - name: ⬇️ Download screenshots
-        uses: actions/download-artifact@v4
-        with:
-          pattern: screenshots-*
-          path: downloaded-screenshots/
-          merge-multiple: true
-        continue-on-error: true
-
-      - name: 🔧 Prepare Nuclear Option Environment
+      - name: 🔧 Prepare enhancement environment
         run: |
-          echo "🚀 Setting up Nuclear Option environment..."
+          echo "🚀 Setting up nuclear option environment..."
+          mkdir -p {allure-results,screenshots}
           
-          # Create working directories
-          mkdir -p allure-results screenshots
+          # Copy artifacts
+          find artifacts -name "*.json" -path "*/allure-results/*" -exec cp {} allure-results/ \; 2>/dev/null || true
+          find artifacts -name "*.csv" -path "*/allure-results/*" -exec cp {} allure-results/ \; 2>/dev/null || true  
+          find artifacts -name "*.properties" -path "*/allure-results/*" -exec cp {} allure-results/ \; 2>/dev/null || true
+          find artifacts -name "*.png" -exec cp {} screenshots/ \; 2>/dev/null || true
           
-          # Copy allure results
-          echo "📁 Copying allure results..."
-          find downloaded-results -name "*.json" -path "*/allure-results/*" -exec cp {} allure-results/ \; || echo "No JSON files found"
-          find downloaded-results -name "*.csv" -path "*/allure-results/*" -exec cp {} allure-results/ \; || echo "No CSV files found"
-          find downloaded-results -name "*.properties" -path "*/allure-results/*" -exec cp {} allure-results/ \; || echo "No properties files found"
-          
-          # Copy screenshots
-          echo "📸 Copying screenshots..."
-          find downloaded-screenshots -name "*.png" -exec cp {} screenshots/ \; || echo "No PNG screenshots found"
-          find downloaded-screenshots -name "*.jpg" -exec cp {} screenshots/ \; || echo "No JPG screenshots found"
-          
-          echo "🔍 Current state before Nuclear Option:"
-          echo "Allure results:"
-          ls -la allure-results/ || echo "No allure-results directory"
-          echo "Screenshots:"
-          ls -la screenshots/ || echo "No screenshots directory"
+          echo "📊 Pre-enhancement state:"
+          echo "Allure results: $(ls -1 allure-results/ 2>/dev/null | wc -l) files"
+          echo "Screenshots: $(ls -1 screenshots/ 2>/dev/null | wc -l) files"
 
-      - name: 🚀 Execute Nuclear Option
+      - name: 🚀 Execute nuclear option
         run: |
           echo "🚀 NUCLEAR OPTION: Starting screenshot injection..."
           
-          # Run Nuclear Option
           if node scripts/nuclear-option.js; then
-            echo "✅ Nuclear Option completed successfully"
+            echo "✅ Nuclear option completed successfully"
           else
-            echo "⚠️ Nuclear Option encountered issues (continuing anyway)"
+            echo "⚠️ Nuclear option encountered issues (continuing)"
           fi
           
-          echo "🔍 Final state after Nuclear Option:"
-          echo "Updated allure results:"
-          ls -la allure-results/ || echo "No allure-results directory"
-          
-          # Check for injected attachments
-          ATTACHMENT_COUNT=$(find allure-results -name "*attachment*.png" | wc -l)
-          echo "📸 Found $ATTACHMENT_COUNT injected screenshot attachments"
-          
-          if [ "$ATTACHMENT_COUNT" -gt 0 ]; then
-            echo "✅ Screenshots successfully injected into Allure results"
-            find allure-results -name "*attachment*.png" | head -5
-          else
-            echo "ℹ️ No screenshots were injected (tests may have all passed)"
-          fi
+          ATTACHMENT_COUNT=$(find allure-results -name "*attachment*.png" 2>/dev/null | wc -l)
+          echo "📸 Injected $ATTACHMENT_COUNT screenshot attachments"
 
-      - name: 📤 Upload Enhanced Allure Results
+      - name: 📤 Upload enhanced results
         uses: actions/upload-artifact@v4
         with:
           name: nuclear-enhanced-allure-results
           path: allure-results/
-          retention-days: 30
+          retention-days: ${{ env.RETENTION_DAYS_ARTIFACTS }}
 
-  allure-report:
-    name: 📊 Generate Allure Report
+  report-generation:
+    name: 📊 Report Generation
     runs-on: ubuntu-latest
     needs: [test-execution, nuclear-option]
     if: always()
 
     steps:
-      - name: 📥 Checkout code
+      - name: 📥 Checkout
         uses: actions/checkout@v4
 
-      - name: 📦 Setup Node.js
+      - name: 🔧 Setup Node.js and Allure
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
 
-      - name: 📋 Install dependencies
-        run: npm ci
+      - name: 📦 Install dependencies
+        run: |
+          npm ci
+          npm install -g allure-commandline
 
-      - name: 🔧 Install Allure CLI
-        run: npm install -g allure-commandline
-
-      - name: ⬇️ Download nuclear-enhanced results
+      - name: ⬇️ Download enhanced results
         uses: actions/download-artifact@v4
         with:
           name: nuclear-enhanced-allure-results
           path: allure-results/
         continue-on-error: true
 
-      - name: ⬇️ Download original test results (fallback)
+      - name: ⬇️ Download fallback results
+        if: steps.download-enhanced.outcome == 'failure'
         uses: actions/download-artifact@v4
         with:
-          pattern: test-results-*
-          path: collected-results/
+          pattern: 'test-results-*'
+          path: fallback-results/
           merge-multiple: true
 
-      - name: 📸 Download screenshots from failed tests
-        uses: actions/download-artifact@v4
-        with:
-          pattern: screenshots-*
-          path: collected-screenshots/
-          merge-multiple: true
-        continue-on-error: true
-
-      - name: 📊 Generate Allure Report
+      - name: 📊 Generate comprehensive reports
         run: |
-          echo "🔍 Checking nuclear-enhanced results..."
-          ls -la allure-results/ || echo "No nuclear-enhanced allure-results directory"
-          
-          # If nuclear-enhanced results don't exist, fall back to original results
+          # Ensure we have results to work with
           if [ ! -d "allure-results" ] || [ ! "$(ls -A allure-results 2>/dev/null)" ]; then
-            echo "⚠️ No nuclear-enhanced results found, using original results..."
-            ls -la collected-results/ || echo "No collected-results directory"
-            find collected-results -type f | head -20
-            
-            # Create fresh allure-results directory
-            rm -rf allure-results
-            mkdir -p allure-results
-            
-            # Combine all allure results from different browsers
-            echo "🔄 Combining allure results from all browsers..."
-            find collected-results -name "*.json" -path "*/allure-results/*" -exec cp {} allure-results/ \; || echo "No JSON files found"
-            find collected-results -name "*.csv" -path "*/allure-results/*" -exec cp {} allure-results/ \; || echo "No CSV files found"
-          else
-            echo "✅ Using nuclear-enhanced results with screenshot attachments"
+            echo "⚠️ No enhanced results, using fallback..."
+            rm -rf allure-results && mkdir -p allure-results
+            find fallback-results -name "*.json" -path "*/allure-results/*" -exec cp {} allure-results/ \; 2>/dev/null || true
           fi
           
-          # Nuclear Option should have already injected screenshots into JSON files
-          # This section copies any remaining loose screenshots as backup
-          echo "📸 Copying any remaining screenshots to Allure report..."
-          if [ -d "collected-screenshots" ]; then
-            mkdir -p allure-results/screenshots
-            find collected-screenshots -name "*.png" -exec cp {} allure-results/screenshots/ \; || echo "No screenshots found"
-            find collected-screenshots -name "*.jpg" -exec cp {} allure-results/screenshots/ \; || echo "No JPG screenshots found"
-            echo "✅ Screenshots copied to allure results (backup)"
-            ls -la allure-results/screenshots/ || echo "No screenshots directory"
-          else
-            echo "⚠️ No screenshots directory found - tests may have all passed"
-          fi
-          
-          # Merge environment properties from all browsers
-          echo "🔄 Merging environment information..."
+          # Create combined environment properties
           cat > allure-results/environment.properties << EOF
           Test.Suite=Playwright BDD Cross-Browser Testing
-          Browsers.Tested=chromium,firefox
+          Browsers.Tested=${{ env.PLAYWRIGHT_BROWSERS }}
           Platform=ubuntu-latest
           CI.Provider=GitHub Actions
           Execution.Mode=Headless
           Node.Version=$(node -v)
           Test.Framework=Cucumber + Playwright + Screenplay Pattern
-          Test.Type=${TEST_TYPE:-all}
+          Test.Type=${{ github.event.inputs.test_type || 'all' }}
           Execution.Date=$(date -u +"%Y-%m-%d %H:%M:%S UTC")
-          Repository=$GITHUB_REPOSITORY
-          Branch=$GITHUB_REF_NAME
-          Commit=$GITHUB_SHA
-          Triggered.By=@$GITHUB_ACTOR
-          Trigger.Event=$GITHUB_EVENT_NAME
-          Run.ID=$GITHUB_RUN_ID
-          Run.Number=$GITHUB_RUN_NUMBER
+          Repository=${{ github.repository }}
+          Branch=${{ github.ref_name }}
+          Commit=${{ github.sha }}
+          Triggered.By=@${{ github.actor }}
+          Trigger.Event=${{ github.event_name }}
+          Run.ID=${{ github.run_id }}
+          Run.Number=${{ github.run_number }}
           EOF
           
-          # Create combined executor.json
+          # Create executor info
           cat > allure-results/executor.json << EOF
           {
             "name": "GitHub Actions - Cross Browser",
             "type": "github-actions",
-            "url": "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID",
-            "buildOrder": $GITHUB_RUN_NUMBER,
-            "buildName": "Cross-Browser BDD Tests - @$GITHUB_ACTOR",
-            "buildUrl": "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID",
-            "reportName": "Playwright BDD Cross-Browser Report",
-            "reportUrl": "https://rilham97.github.io/web-automation-playwright/",
-            "triggeredBy": "$GITHUB_ACTOR",
-            "triggerEvent": "$GITHUB_EVENT_NAME",
-            "runId": "$GITHUB_RUN_ID",
-            "runNumber": $GITHUB_RUN_NUMBER
+            "url": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}",
+            "buildOrder": ${{ github.run_number }},
+            "buildName": "BDD Tests - @${{ github.actor }}",
+            "buildUrl": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}",
+            "reportName": "Playwright BDD Report",
+            "triggeredBy": "${{ github.actor }}",
+            "triggerEvent": "${{ github.event_name }}",
+            "runId": "${{ github.run_id }}",
+            "runNumber": ${{ github.run_number }}
           }
           EOF
           
-          echo "🔍 Final allure-results directory:"
-          ls -la allure-results/ || echo "No allure-results directory"
-          
-          # Generate report only if we have results
+          # Generate reports
           if [ "$(ls -A allure-results 2>/dev/null)" ]; then
             echo "✅ Generating Allure report..."
             npm run allure:generate
-            echo "✅ Allure report generated successfully"
+            echo "✅ Allure report generated"
           else
-            echo "⚠️ No allure results found, creating empty report directory"
+            echo "⚠️ No results found, creating placeholder..."
             mkdir -p allure-report
             echo "<html><body><h1>No test results found</h1></body></html>" > allure-report/index.html
           fi
-
-      - name: 🏗️ Generate Cucumber HTML Report (Fallback)
-        run: |
-          echo "📁 Checking for available cucumber reports..."
-          find collected-results -name "*.json" -type f | head -10
-          ls -la collected-results/ || echo "No collected-results directory"
           
-          # Try to create a basic HTML report even if cucumber data is missing
+          # Generate Cucumber HTML report (fallback)
           mkdir -p reports
-          if [ -f "collected-results/cucumber-report.json" ] || find collected-results -name "*cucumber*.json" -type f | grep -q .; then
-            echo "✅ Found cucumber JSON files, generating HTML report..."
-            npm run generate-report || echo "❌ Cucumber HTML report generation failed"
-          else
-            echo "⚠️ No cucumber JSON files found, creating basic summary report..."
+          npm run generate-report 2>/dev/null || {
             cat > reports/index.html << 'EOF'
           <!DOCTYPE html>
           <html><head><title>Test Summary</title></head>
@@ -572,61 +399,48 @@ jobs:
           <h1>🎭 Playwright BDD Test Summary</h1>
           <p>Cross-browser test execution completed.</p>
           <p>For detailed results, check the Allure report.</p>
-          <ul>
-          <li>✅ Chromium tests executed</li>
-          <li>✅ Firefox tests executed</li>
-          </ul>
           </body></html>
           EOF
-            echo "✅ Created basic summary report"
-          fi
+          }
 
-      - name: 📤 Upload Allure Report
+      - name: 📤 Upload reports
         uses: actions/upload-artifact@v4
         with:
-          name: allure-report
-          path: allure-report/
-          retention-days: 30
-
-      - name: 📤 Upload HTML Reports
-        uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: cucumber-html-report
-          path: reports/
-          retention-days: 30
+          name: test-reports
+          path: |
+            allure-report/
+            reports/
+          retention-days: ${{ env.RETENTION_DAYS_ARTIFACTS }}
 
   deploy-reports:
-    name: 🚀 Deploy Reports to GitHub Pages
+    name: 🚀 Deploy to GitHub Pages
     runs-on: ubuntu-latest
-    needs: [allure-report, nuclear-option]
+    needs: report-generation
     if: always() && github.ref == 'refs/heads/main'
-    permissions:
-      contents: read
-      pages: write
-      id-token: write
+    
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
 
     steps:
-      - name: 📥 Checkout code
+      - name: 📥 Checkout
         uses: actions/checkout@v4
 
-      - name: ⬇️ Download Allure Report
+      - name: ⬇️ Download reports
         uses: actions/download-artifact@v4
         with:
-          name: allure-report
-          path: public/allure/
-        continue-on-error: true
+          name: test-reports
+          path: reports-download/
 
-      - name: ⬇️ Download HTML Report
-        uses: actions/download-artifact@v4
-        with:
-          name: cucumber-html-report
-          path: public/cucumber/
-        continue-on-error: true
-
-      - name: 🏗️ Create Index Page
+      - name: 🏗️ Create deployment structure
         run: |
-          mkdir -p public
+          mkdir -p public/{allure,cucumber}
+          
+          # Copy reports if they exist
+          [ -d "reports-download/allure-report" ] && cp -r reports-download/allure-report/* public/allure/ || echo "No Allure report"
+          [ -d "reports-download/reports" ] && cp -r reports-download/reports/* public/cucumber/ || echo "No Cucumber report"
+          
+          # Create index page
           cat > public/index.html << 'EOF'
           <!DOCTYPE html>
           <html>
@@ -642,6 +456,7 @@ jobs:
                   .report-card a { text-decoration: none; color: #007bff; font-weight: bold; font-size: 18px; }
                   .report-card p { color: #666; margin-top: 10px; }
                   .badge { background: #28a745; color: white; padding: 4px 8px; border-radius: 4px; font-size: 12px; }
+                  .footer { margin-top: 30px; text-align: center; color: #888; font-size: 14px; }
               </style>
           </head>
           <body>
@@ -663,9 +478,9 @@ jobs:
                       </div>
                   </div>
                   
-                  <div style="margin-top: 30px; text-align: center; color: #888; font-size: 14px;">
-                      Generated on: $(date)<br>
-                      <a href="https://github.com/rilham97/web-automation-playwright" target="_blank">🔗 View Source Code</a>
+                  <div class="footer">
+                      Generated: $(date)<br>
+                      <a href="${{ github.server_url }}/${{ github.repository }}" target="_blank">🔗 View Source Code</a>
                   </div>
               </div>
           </body>
@@ -675,7 +490,7 @@ jobs:
       - name: 🔧 Setup Pages
         uses: actions/configure-pages@v4
 
-      - name: 📤 Upload Pages Artifact
+      - name: 📤 Upload Pages artifact  
         uses: actions/upload-pages-artifact@v3
         with:
           path: public/

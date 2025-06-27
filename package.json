@@ -66,7 +66,6 @@
     "bdd:checkout:allure:serve": "npm run bdd:checkout:allure && npm run allure:serve",
     "bdd:checkout:price-calculation:allure:serve": "npm run bdd:checkout:price-calculation:allure && npm run allure:serve",
     "bdd:sorting:allure:serve": "npm run bdd:sorting:allure && npm run allure:serve",
-
     "lint": "eslint src/ features/ --ext .js",
     "lint:fix": "eslint src/ features/ --ext .js --fix",
     "lint:check": "eslint src/ features/ --ext .js --max-warnings 0",
@@ -93,5 +92,8 @@
     "allure-cucumberjs": "^3.3.0",
     "eslint": "^9.29.0",
     "husky": "^9.1.7"
+  },
+  "dependencies": {
+    "glob": "^11.0.3"
   }
 }
